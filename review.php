@@ -33,11 +33,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_submit'])) {
             'involved_address' => $data['involved_address'],
             'involved_school_office_unit' => $data['involved_school_office_unit'],
             'narration_complaint' => $data['narration_complaint'],
+            'narration_complaint_page2' => $data['narration_complaint_page2'] ?? null,
             'desired_action_relief' => $data['desired_action_relief'],
             'certification_agreed' => isset($data['certification_agreed']),
-            'printed_name_pangalan' => $data['printed_name_pangalan'],
+            'printed_name_pangalan' => $data['typed_signature'] ?? $data['name_pangalan'],
             'signature_type' => 'typed',
-            'signature_data' => $data['typed_signature'] ?? $data['printed_name_pangalan']
+            'signature_data' => $data['typed_signature'] ?? $data['name_pangalan']
         ];
         
         $result = $complaint->create($complaintData);
@@ -88,10 +89,11 @@ $othersText = ($data['referred_to'] === 'Others' && !empty($data['referred_to_ot
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Review Submission - SDO CTS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
-    <!-- PDF Export Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* Form Container - Fixed size matching the official form */
         .form-container {
@@ -256,18 +258,17 @@ $othersText = ($data['referred_to'] === 'Others' && !empty($data['referred_to_ot
         
         /* Review Banner */
         .review-banner {
-            background: linear-gradient(135deg, #ff9800, #f57c00);
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+            background: transparent;
+            color: var(--text-primary);
+            padding: 0 0 10px;
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 10px;
         }
-        .review-banner .icon { font-size: 1.8rem; }
-        .review-banner h3 { margin: 0 0 5px; font-size: 1rem; }
-        .review-banner p { margin: 0; font-size: 0.85rem; opacity: 0.9; }
+        .review-banner .icon { font-size: 1.5rem; color: var(--primary-color); }
+        .review-banner h3 { margin: 0 0 4px; font-size: 1.05rem; }
+        .review-banner p { margin: 0; font-size: 0.85rem; color: var(--text-secondary); }
         
         .attached-notice {
             background: #f5f5f5;
@@ -277,11 +278,88 @@ $othersText = ($data['referred_to'] === 'Others' && !empty($data['referred_to_ot
             border: 1px solid #ddd;
         }
         
+        /* Additional Page Styles - Official Form Look */
+        .additional-page {
+            position: relative;
+            width: 850px;
+            max-width: 100%;
+            margin: 30px auto 0;
+            background: #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px 40px;
+            min-height: 1100px;
+        }
+        
+        .additional-page-header {
+            text-align: center;
+            margin-bottom: 0;
+            border: 1px solid #000;
+            border-left: 3px solid #000;
+            border-right: 3px solid #000;
+            border-bottom: none;
+            padding: 10px;
+            background: #fff;
+        }
+        
+        .additional-page-header h2 {
+            color: #000;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 14px;
+            font-weight: bold;
+            margin: 0 0 5px;
+            text-transform: uppercase;
+            letter-spacing: 0;
+        }
+        
+        .additional-page-header p {
+            color: #000;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 12px;
+            font-style: italic;
+            margin: 0;
+        }
+        
+        .additional-page-content {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 11px;
+            line-height: 28px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            min-height: 900px;
+            padding: 5px 10px;
+            background: repeating-linear-gradient(
+                transparent,
+                transparent 27px,
+                #000 27px,
+                #000 28px
+            );
+            border: 1px solid #000;
+            border-left: 3px solid #000;
+            border-right: 3px solid #000;
+            border-bottom: 3px solid #000;
+        }
+        
+        .page-indicator {
+            text-align: center;
+            color: #999;
+            font-size: 0.85rem;
+            margin-top: 15px;
+        }
+        
+        .page-number-label {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 11px;
+            text-align: right;
+            margin-bottom: 10px;
+            color: #000;
+        }
+        
         @media print {
             .no-print { display: none !important; }
             body { margin: 0; padding: 0; background: #fff; }
             .container { max-width: 100%; padding: 0; }
-            .form-container { box-shadow: none; }
+            .form-container { box-shadow: none; page-break-after: always; }
+            .additional-page { box-shadow: none; margin-top: 0; page-break-before: always; }
         }
         
         @media (max-width: 850px) {
@@ -304,8 +382,9 @@ $othersText = ($data['referred_to'] === 'Others' && !empty($data['referred_to_ot
     <div class="container">
         <nav class="nav-bar no-print">
             <div class="nav-links">
-                <a href="index.php">📝 File Complaint</a>
-                <a href="track.php">🔍 Track Complaint</a>
+                <a href="index.php" class="active"><i class="fas fa-file-alt"></i> File Complaint</a>
+                <a href="track.php"><i class="fas fa-search"></i> Track Complaint</a>
+                <a href="contact.php"><i class="fas fa-phone-alt"></i> Contact Us</a>
             </div>
         </nav>
 
@@ -315,15 +394,15 @@ $othersText = ($data['referred_to'] === 'Others' && !empty($data['referred_to_ot
         </div>
         <?php endif; ?>
 
-        <div class="review-banner no-print">
-            <span class="icon">📋</span>
+        <div class="review-banner no-print" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+            <span class="icon" style="font-size: 1.5rem; margin-bottom: 1px;"><i class="fas fa-clipboard-list"></i></span>
             <div>
-                <h3>Review Your Complaint Assisted Form</h3>
-                <p>Verify all information below. The form shows your data on the official DepEd template.</p>
+                <h3 style="margin: 5 0 7px;">Review Your Complaint Assisted Form</h3>
+                <p style="margin: 0;">Verify all the information below are correct.</p>
             </div>
         </div>
 
-        <!-- FORM WITH IMAGE BACKGROUND AND TEXT OVERLAY -->
+        <!-- PAGE 1: FORM WITH IMAGE BACKGROUND AND TEXT OVERLAY -->
         <div class="form-container">
             <!-- Background Image (Official Form) -->
             <img src="reference/COMPLAINT-ASSISTED-FORM_1.jpg" 
@@ -361,10 +440,26 @@ $othersText = ($data['referred_to'] === 'Others' && !empty($data['referred_to_ot
                 <div class="field-box narration-box"><?php echo htmlspecialchars($data['narration_complaint']); ?></div>
                 
                 <!-- Signature -->
-                <div class="field-box signature-box"><?php echo htmlspecialchars($data['typed_signature'] ?? $data['printed_name_pangalan']); ?></div>
+                <div class="field-box signature-box"><?php echo htmlspecialchars($data['typed_signature'] ?? $data['name_pangalan']); ?></div>
                 
             </div>
         </div>
+        <div class="page-indicator no-print">Page 1 of <?php echo !empty($data['narration_complaint_page2']) ? '2' : '1'; ?></div>
+
+        <!-- PAGE 2: ADDITIONAL PAGE FOR NARRATION CONTINUATION (Only if content exists) -->
+        <?php if (!empty($data['narration_complaint_page2'])): ?>
+        <div class="additional-page">
+            <div class="page-number-label"></div>
+            
+            <div class="additional-page-header">
+                <h2>CONTINUATION OF NARRATION OF COMPLAINT / INQUIRY AND RELIEF</h2>
+                <p>(Ano ang iyong reklamo, tanong, request o suhestiyon? Ano ang gusto mong aksiyon?)</p>
+            </div>
+            
+            <div class="additional-page-content"><?php echo htmlspecialchars($data['narration_complaint_page2']); ?></div>
+        </div>
+        <div class="page-indicator no-print">Page 2 of 2</div>
+        <?php endif; ?>
 
         <!-- Attached Files (Below Form) -->
         <?php if (!empty($files)): ?>
@@ -383,75 +478,9 @@ $othersText = ($data['referred_to'] === 'Others' && !empty($data['referred_to_ot
             <a href="index.php?edit=1" class="btn btn-secondary">⬅️ Go Back & Edit</a>
             <div style="display:flex;gap:10px;">
                 <button type="button" class="btn btn-outline" onclick="window.print()">🖨️ Print</button>
-                <button type="button" class="btn btn-outline" onclick="exportToPDF()" id="pdfBtn">📄 Save as PDF</button>
                 <button type="submit" name="confirm_submit" class="btn btn-success btn-lg">✅ Confirm & Submit</button>
             </div>
         </form>
-
-        <script>
-        async function exportToPDF() {
-            const btn = document.getElementById('pdfBtn');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '⏳ Generating PDF...';
-            btn.disabled = true;
-
-            try {
-                const { jsPDF } = window.jspdf;
-                const formContainer = document.querySelector('.form-container');
-                
-                // Capture the form as canvas
-                const canvas = await html2canvas(formContainer, {
-                    scale: 2,
-                    useCORS: true,
-                    allowTaint: true,
-                    backgroundColor: '#ffffff'
-                });
-
-                // A4 dimensions in mm
-                const a4Width = 210;
-                const a4Height = 297;
-
-                // Create PDF in A4 portrait
-                const pdf = new jsPDF({
-                    orientation: 'portrait',
-                    unit: 'mm',
-                    format: 'a4'
-                });
-
-                // Calculate dimensions to fit A4
-                const imgWidth = a4Width - 20; // 10mm margin on each side
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-                // If image is taller than A4, scale down
-                let finalWidth = imgWidth;
-                let finalHeight = imgHeight;
-                
-                if (imgHeight > a4Height - 20) {
-                    finalHeight = a4Height - 20;
-                    finalWidth = (canvas.width * finalHeight) / canvas.height;
-                }
-
-                // Center the image
-                const xOffset = (a4Width - finalWidth) / 2;
-                const yOffset = 10;
-
-                // Add image to PDF
-                const imgData = canvas.toDataURL('image/png');
-                pdf.addImage(imgData, 'PNG', xOffset, yOffset, finalWidth, finalHeight);
-
-                // Save the PDF
-                const fileName = 'Complaint-Form-<?php echo date("Y-m-d"); ?>.pdf';
-                pdf.save(fileName);
-
-            } catch (error) {
-                console.error('PDF generation error:', error);
-                alert('Error generating PDF. Please try again or use Print option.');
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
-        }
-        </script>
 
         <footer class="form-footer no-print">
             <p>SDO CTS - San Pedro Division Office Complaint Tracking System</p>

@@ -6,6 +6,7 @@ uploads/complaints/*
 
 # Environment
 .env
+config/.env
 *.log
 
 # IDE

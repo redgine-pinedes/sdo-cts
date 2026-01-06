@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS complaints (
     
     -- Narration of Complaint/Inquiry and Relief
     narration_complaint TEXT NOT NULL,
+    narration_complaint_page2 TEXT DEFAULT NULL,
     desired_action_relief TEXT NOT NULL,
     
     -- Certification on Non-Forum Shopping

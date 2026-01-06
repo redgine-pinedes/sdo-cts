@@ -106,6 +106,21 @@ Default settings (can be modified in `config/database.php`):
 - Upload directory protection
 - Session-based data handling
 
+## Admin OAuth Configuration (Secrets)
+
+The admin panel uses Google OAuth. To avoid committing secrets, configure them via environment variables. Copy `.env.example` to `.env` and fill in your values:
+
+```
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_REDIRECT_URI=http://localhost/SDO-cts/admin/auth/google-callback.php
+```
+
+Notes:
+- `.env` is ignored by git (see `.gitignore`).
+- You can also set these as system environment variables in Windows.
+- The application reads env vars in `config/admin_config.php` using a lightweight `.env` loader.
+
 ## License
 
 This project is developed for the Department of Education - San Pedro Division Office.

@@ -48,14 +48,14 @@ class Complaint {
             reference_number, referred_to, referred_to_other, date_petsa,
             name_pangalan, address_tirahan, contact_number, email_address,
             involved_full_name, involved_position, involved_address, involved_school_office_unit,
-            narration_complaint, desired_action_relief, certification_agreed,
+            narration_complaint, narration_complaint_page2, desired_action_relief, certification_agreed,
             printed_name_pangalan, signature_type, signature_data, date_signed,
             status, is_locked
         ) VALUES (
             ?, ?, ?, NOW(),
             ?, ?, ?, ?,
             ?, ?, ?, ?,
-            ?, ?, ?,
+            ?, ?, ?, ?,
             ?, ?, ?, ?,
             'pending', 1
         )";
@@ -73,6 +73,7 @@ class Complaint {
             $data['involved_address'],
             $data['involved_school_office_unit'],
             $data['narration_complaint'],
+            $data['narration_complaint_page2'] ?? null,
             $data['desired_action_relief'],
             $data['certification_agreed'] ? 1 : 0,
             $data['printed_name_pangalan'],

@@ -38,11 +38,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['ref'])) {
 
 // Status display mapping
 $statusLabels = [
-    'pending' => ['label' => 'Pending', 'icon' => '⏳'],
-    'under_review' => ['label' => 'Under Review', 'icon' => '🔍'],
-    'in_progress' => ['label' => 'In Progress', 'icon' => '⚙️'],
-    'resolved' => ['label' => 'Resolved', 'icon' => '✅'],
-    'closed' => ['label' => 'Closed', 'icon' => '📁']
+    'pending' => ['label' => 'Pending', 'icon' => 'fas fa-hourglass-half'],
+    'accepted' => ['label' => 'Accepted', 'icon' => 'fas fa-check-square'],
+    'in_progress' => ['label' => 'In Progress', 'icon' => 'fas fa-cog'],
+    'resolved' => ['label' => 'Resolved', 'icon' => 'fas fa-check-circle'],
+    'returned' => ['label' => 'Returned', 'icon' => 'fas fa-undo'],
+    'closed' => ['label' => 'Closed', 'icon' => 'fas fa-folder']
 ];
 ?>
 <!DOCTYPE html>
@@ -55,6 +56,7 @@ $statusLabels = [
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .status-card {
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
@@ -178,21 +180,22 @@ $statusLabels = [
         <!-- Navigation -->
         <nav class="nav-bar no-print">
             <div class="nav-links">
-                <a href="index.php">📝 File Complaint</a>
-                <a href="track.php" class="active">🔍 Track Complaint</a>
+                <a href="index.php"><i class="fas fa-file-alt"></i> File Complaint</a>
+                <a href="track.php" class="active"><i class="fas fa-search"></i> Track Complaint</a>
+                <a href="contact.php"><i class="fas fa-phone-alt"></i> Contact Us</a>
             </div>
         </nav>
 
         <!-- Header -->
         <header class="form-header">
-            <h1>🔍 Track Your Complaint</h1>
+            <h1><i class="fas fa-search"></i> Track Your Complaint</h1>
             <p class="subtitle">Enter your reference number and email to view your complaint status</p>
         </header>
 
         <!-- Search Form -->
         <section class="form-section">
             <div class="section-header">
-                <span class="section-icon">🔎</span>
+                <span class="section-icon"><i class="fas fa-search"></i></span>
                 Find Your Complaint
             </div>
             <div class="section-content">
@@ -218,7 +221,7 @@ $statusLabels = [
                         </div>
                     </div>
                     <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">
-                        🔍 Track Complaint
+                        <i class="fas fa-search"></i> Track Complaint
                     </button>
                 </form>
             </div>
@@ -226,7 +229,7 @@ $statusLabels = [
 
         <?php if ($error): ?>
         <div class="review-notice" style="background: #f8d7da; border-left-color: #dc3545; color: #721c24;">
-            ⚠️ <?php echo htmlspecialchars($error); ?>
+            <i class="fas fa-exclamation-triangle"></i> <?php echo htmlspecialchars($error); ?>
         </div>
         <?php endif; ?>
 
@@ -242,7 +245,7 @@ $statusLabels = [
                 <div class="badge">
                     <?php 
                     $status = $complaint['status'];
-                    echo $statusLabels[$status]['icon'] . ' ' . $statusLabels[$status]['label'];
+                    echo '<i class="' . $statusLabels[$status]['icon'] . '"></i> ' . $statusLabels[$status]['label'];
                     ?>
                 </div>
             </div>
@@ -251,13 +254,16 @@ $statusLabels = [
         <!-- Progress Tracker -->
         <section class="form-section">
             <div class="section-header">
-                <span class="section-icon">📊</span>
+                <span class="section-icon"><i class="fas fa-chart-line"></i></span>
                 Progress Tracker
             </div>
             <div class="section-content">
                 <?php
-                $statusOrder = ['pending', 'under_review', 'in_progress', 'resolved', 'closed'];
+                $statusOrder = ['pending', 'accepted', 'in_progress', 'resolved', 'closed'];
                 $currentIndex = array_search($complaint['status'], $statusOrder);
+                if ($complaint['status'] === 'returned') {
+                    $currentIndex = -1; // Show returned status separately
+                }
                 ?>
                 <div class="progress-tracker">
                     <?php foreach ($statusOrder as $index => $step): ?>
@@ -271,7 +277,7 @@ $statusLabels = [
                     ?>
                     <div class="progress-step <?php echo $stepClass; ?>">
                         <div class="step-icon">
-                            <?php echo $index < $currentIndex ? '✓' : $statusLabels[$step]['icon']; ?>
+                            <?php echo $index < $currentIndex ? '<i class="fas fa-check"></i>' : '<i class="' . $statusLabels[$step]['icon'] . '"></i>'; ?>
                         </div>
                         <span class="step-label"><?php echo $statusLabels[$step]['label']; ?></span>
                     </div>
@@ -283,7 +289,7 @@ $statusLabels = [
         <!-- Complaint Details -->
         <section class="form-section">
             <div class="section-header">
-                <span class="section-icon">📋</span>
+                <span class="section-icon"><i class="fas fa-clipboard-list"></i></span>
                 Complaint Details
             </div>
             <div class="section-content">
@@ -330,7 +336,7 @@ $statusLabels = [
                     <div class="value">
                         <?php foreach ($documents as $doc): ?>
                         <div style="padding: 0.5rem 0;">
-                            📎 <?php echo htmlspecialchars($doc['original_name']); ?>
+                            <i class="fas fa-paperclip"></i> <?php echo htmlspecialchars($doc['original_name']); ?>
                         </div>
                         <?php endforeach; ?>
                     </div>
@@ -343,7 +349,7 @@ $statusLabels = [
         <?php if (!empty($history)): ?>
         <section class="form-section">
             <div class="section-header">
-                <span class="section-icon">📜</span>
+                <span class="section-icon"><i class="fas fa-history"></i></span>
                 Status History
             </div>
             <div class="section-content">
@@ -354,7 +360,7 @@ $statusLabels = [
                             <?php echo date('M j, Y \a\t g:i A', strtotime($entry['created_at'])); ?>
                         </div>
                         <div class="status">
-                            <?php echo $statusLabels[$entry['status']]['icon'] . ' ' . $statusLabels[$entry['status']]['label']; ?>
+                            <i class="<?php echo $statusLabels[$entry['status']]['icon']; ?>"></i> <?php echo $statusLabels[$entry['status']]['label']; ?>
                         </div>
                         <?php if (!empty($entry['notes'])): ?>
                         <div class="notes"><?php echo htmlspecialchars($entry['notes']); ?></div>
@@ -372,7 +378,7 @@ $statusLabels = [
         <?php elseif ($searched && !$error): ?>
         <div class="form-section">
             <div class="section-content" style="text-align: center; padding: 3rem;">
-                <div style="font-size: 4rem; margin-bottom: 1rem;">🔍</div>
+                <div style="font-size: 4rem; margin-bottom: 1rem; color: var(--text-muted);"><i class="fas fa-search"></i></div>
                 <h3 style="color: var(--text-secondary); margin-bottom: 0.5rem;">No Results Found</h3>
                 <p style="color: var(--text-muted);">
                     We couldn't find a complaint matching your search criteria.<br>

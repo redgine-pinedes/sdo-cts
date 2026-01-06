@@ -80,21 +80,23 @@ function isChecked($field, $value) {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="container">
         <!-- Navigation -->
         <nav class="nav-bar no-print">
             <div class="nav-links">
-                <a href="index.php" class="active">📝 File Complaint</a>
-                <a href="track.php">🔍 Track Complaint</a>
+                <a href="index.php" class="active"><i class="fas fa-file-alt"></i> File Complaint</a>
+                <a href="track.php"><i class="fas fa-search"></i> Track Complaint</a>
+                <a href="contact.php"><i class="fas fa-phone-alt"></i> Contact Us</a>
             </div>
         </nav>
 
         <!-- Header -->
         <header class="form-header">
             <div class="deped-badge">
-                🏛️ Department of Education
+                <i class="fas fa-landmark"></i> Department of Education
             </div>
             <h1>Complaints-Assisted Form</h1>
             <p class="subtitle">Region IVA - CALABARZON | Schools Division Office of San Pedro City</p>
@@ -103,7 +105,7 @@ function isChecked($field, $value) {
         <!-- Privacy Notice -->
         <section class="form-section">
             <div class="section-header">
-                <span class="section-icon">🔒</span>
+                <span class="section-icon"><i class="fas fa-lock"></i></span>
                 Privacy Notice
             </div>
             <div class="section-content">
@@ -117,7 +119,7 @@ function isChecked($field, $value) {
             <!-- Section 1: Routing and Reference -->
             <section class="form-section">
                 <div class="section-header">
-                    <span class="section-icon">📋</span>
+                    <span class="section-icon"><i class="fas fa-clipboard-list"></i></span>
                     Referred to (indicate unit/section)
                 </div>
                 <div class="section-content">
@@ -170,7 +172,7 @@ function isChecked($field, $value) {
             <!-- Section 2: Complainant Information -->
             <section class="form-section">
                 <div class="section-header">
-                    <span class="section-icon">👤</span>
+                    <span class="section-icon"><i class="fas fa-user"></i></span>
                     Complainant/Requestor Information
                 </div>
                 <div class="section-content">
@@ -217,7 +219,7 @@ function isChecked($field, $value) {
             <!-- Section 3: Person/Office Involved -->
             <section class="form-section">
                 <div class="section-header">
-                    <span class="section-icon">🏢</span>
+                    <span class="section-icon"><i class="fas fa-building"></i></span>
                     Office/School/Person Involved
                 </div>
                 <div class="section-content">
@@ -263,7 +265,7 @@ function isChecked($field, $value) {
             <!-- Section 4: Complaint Details -->
             <section class="form-section">
                 <div class="section-header">
-                    <span class="section-icon">📝</span>
+                    <span class="section-icon"><i class="fas fa-edit"></i></span>
                     Narration of Complaint/Inquiry and Relief
                 </div>
                 <div class="section-content">
@@ -281,6 +283,20 @@ function isChecked($field, $value) {
                             <em>(Maaaring gumamit ng mga karagdagang pahina)</em> - You may use additional pages if needed.
                         </small>
                     </div>
+                    
+                    <!-- Additional Page for Narration Continuation -->
+                    <div class="form-group" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 2px dashed var(--input-border);">
+                        <label class="form-label" for="narration_complaint_page2">
+                            <i class="fas fa-file-alt"></i> Additional Page - Continuation of Narration <span class="optional">(Optional)</span>
+                        </label>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.75rem;">
+                            Use this space if you need more room for your narration. This will appear on a separate page.
+                        </p>
+                        <textarea class="form-control" id="narration_complaint_page2" name="narration_complaint_page2" 
+                                  placeholder="Continue your narration here if you need more space..."
+                                  rows="10"><?php echo getValue('narration_complaint_page2'); ?></textarea>
+                    </div>
+                    
                     <input type="hidden" name="desired_action_relief" value="">
                 </div>
             </section>
@@ -288,7 +304,7 @@ function isChecked($field, $value) {
             <!-- Section 5: Supporting Documents -->
             <section class="form-section">
                 <div class="section-header">
-                    <span class="section-icon">📎</span>
+                    <span class="section-icon"><i class="fas fa-paperclip"></i></span>
                     Supporting Documents
                 </div>
                 <div class="section-content">
@@ -301,7 +317,7 @@ function isChecked($field, $value) {
                     
                     <?php if (!empty($formFiles)): ?>
                     <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                        <strong>📎 Previously uploaded files:</strong>
+                        <strong><i class="fas fa-paperclip"></i> Previously uploaded files:</strong>
                         <ul style="margin: 10px 0 0 20px;">
                             <?php foreach ($formFiles as $file): ?>
                             <li><?php echo htmlspecialchars($file['original_name']); ?></li>
@@ -316,7 +332,7 @@ function isChecked($field, $value) {
                             Upload Documents <span class="optional">(Optional but recommended)</span>
                         </label>
                         <div class="file-upload-area" id="dropZone">
-                            <div class="upload-icon">📁</div>
+                            <div class="upload-icon"><i class="fas fa-folder-open"></i></div>
                             <p><strong>Click to upload</strong> or drag and drop files here</p>
                             <p class="file-types">Accepted formats: PDF, JPG, PNG (Max 10MB each)</p>
                             <input type="file" name="documents[]" id="fileInput" 
@@ -330,7 +346,7 @@ function isChecked($field, $value) {
             <!-- Section 6: Certification -->
             <section class="form-section">
                 <div class="section-header">
-                    <span class="section-icon">✅</span>
+                    <span class="section-icon"><i class="fas fa-check-square"></i></span>
                     Certification on Non-Forum Shopping
                 </div>
                 <div class="section-content">
@@ -365,29 +381,20 @@ function isChecked($field, $value) {
             <!-- Section 7: Signature -->
             <section class="form-section">
                 <div class="section-header">
-                    <span class="section-icon">✍️</span>
-                    Name and Signature / Pangalan at Lagda
+                    <span class="section-icon"><i class="fas fa-signature"></i></span>
+                    Signature / Lagda
                 </div>
                 <div class="section-content">
                     <div class="form-group">
-                        <label class="form-label" for="printed_name_pangalan">
-                           Name / Pangalan <span class="required">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="printed_name_pangalan" 
-                               name="printed_name_pangalan" value="<?php echo getValue('printed_name_pangalan'); ?>"
-                               placeholder="Your printed name as acknowledgment" required>
-                    </div>
-                    
-                    <div class="form-group">
                         <label class="form-label" for="typed_signature">
-                            Signature (Type your name) <span class="required">*</span>
+                            Name / Pangalan <span class="required">*</span>
                         </label>
                         <input type="hidden" name="signature_type" value="typed">
                         <input type="text" class="form-control" id="typed_signature" name="typed_signature" 
                                value="<?php echo getValue('typed_signature'); ?>"
                                placeholder="Type your full name as digital signature"
                                style="font-family: 'Arial', Times, serif; font-size: 1rem;" required>
-                        <small style="color: var(--text-muted);">Your typed name serves as your digital signature</small>
+                        <small style="color: var(--text-muted);"></small>
                     </div>
                     
                     <div class="form-group">
@@ -402,10 +409,10 @@ function isChecked($field, $value) {
             <!-- Form Actions -->
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="resetForm()">
-                    🔄 Reset Form
+                    <i class="fas fa-redo"></i> Reset Form
                 </button>
                 <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
-                    Review Submission ➡️
+                    Review Submission <i class="fas fa-arrow-right"></i>
                 </button>
             </div>
         </form>

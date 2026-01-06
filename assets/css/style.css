@@ -747,6 +747,11 @@ select.form-control {
     color: #856404;
 }
 
+.status-badge.accepted {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
 .status-badge.under_review {
     background: #cce5ff;
     color: #004085;
@@ -760,6 +765,11 @@ select.form-control {
 .status-badge.resolved {
     background: #d1e7dd;
     color: #0f5132;
+}
+
+.status-badge.returned {
+    background: #fee2e2;
+    color: #dc2626;
 }
 
 .status-badge.closed {
@@ -1010,5 +1020,6 @@ select.form-control {
         border: none;
     }
 }
+
 
 
