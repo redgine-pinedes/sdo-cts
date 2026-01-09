@@ -543,81 +543,154 @@ include __DIR__ . '/includes/header.php';
                 $primaryIsImage = in_array($primaryExt, ['jpg','jpeg','png','gif']);
                 $primaryIsPdf = ($primaryExt === 'pdf');
             ?>
-            <div class="form-container" style="box-shadow:none;padding:20px 0;">
-                <div style="padding:0 20px 20px;">
-                    <?php if ($primaryDoc): ?>
-                    <h3 style="margin-bottom:10px;">Uploaded Complaint-Assisted Form</h3>
-                    <p style="margin:0 0 10px;color:#555;">
-                        This complaint was filed via an uploaded completed form. You can zoom and scroll the full document below.
-                    </p>
-
-                    <!-- Zoom toolbar for primary uploaded form -->
-                    <div id="uploadedZoomToolbar" style="margin-bottom:8px;display:flex;align-items:center;gap:8px;font-size:12px;color:#444;">
-                        <span>Zoom:</span>
-                        <button type="button" class="btn btn-sm btn-outline" data-zoom="out">−</button>
-                        <button type="button" class="btn btn-sm btn-outline" data-zoom="in">+</button>
-                        <button type="button" class="btn btn-sm btn-secondary" data-zoom="reset">Reset</button>
-                        <span id="uploadedZoomLabel" style="margin-left:4px;">100%</span>
-                    </div>
-
-                    <div id="uploadedDocContainer"
-                         style="width:100%;height:90vh;border:1px solid #ddd;border-radius:6px;background:#fafafa;overflow:auto;display:flex;align-items:center;justify-content:center;padding:10px;box-sizing:border-box;">
-                        <div class="uploaded-preview-inner" style="transform-origin:top left; width:100%; height:100%; max-width:100%; max-height:100%; display:flex; align-items:center; justify-content:center;">
-                            <?php if ($primaryIsImage): ?>
-                                <img src="<?php echo htmlspecialchars($primaryUrl); ?>"
-                                     alt="<?php echo htmlspecialchars($primaryDoc['original_name']); ?>"
-                                     style="max-width:100%;max-height:100%;width:auto;height:auto;display:block;margin:0 auto;object-fit:contain;">
-                            <?php elseif ($primaryIsPdf): ?>
-                                <embed src="<?php echo htmlspecialchars($primaryUrl); ?>" type="application/pdf"
-                                       style="width:100%;height:100%;border:none;" />
-                            <?php else: ?>
-                                <div style="text-align:center;padding:20px;">
-                                    <p style="margin-bottom:10px;">Preview not available for this file type.</p>
-                                    <a href="<?php echo htmlspecialchars($primaryUrl); ?>" target="_blank" class="btn btn-outline btn-sm">
-                                        Open / Download
-                                    </a>
+            <div class="uploaded-documents-section" style="padding:20px 0;">
+                <!-- Uploaded Complaint Form -->
+                <?php if ($primaryDoc): ?>
+                <div class="doc-category-section" style="margin-bottom:24px;">
+                    <h4 style="margin:0 0 12px;font-size:14px;font-weight:600;color:#374151;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-file-alt" style="color:#0f4c75;"></i> Uploaded Complaint-Assisted Form:
+                    </h4>
+                    <ul class="doc-list" style="list-style:none;padding:0;margin:0;">
+                        <?php
+                            $fileExt = strtolower(pathinfo($primaryDoc['file_name'], PATHINFO_EXTENSION));
+                            $isImage = in_array($fileExt, ['jpg','jpeg','png','gif','webp']);
+                            $isPdf = ($fileExt === 'pdf');
+                            $docType = $isImage ? 'image' : ($isPdf ? 'pdf' : 'other');
+                            $fileUrl = "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $primaryDoc['file_name'];
+                            $iconClass = $isImage ? 'fa-image' : ($isPdf ? 'fa-file-pdf' : 'fa-file');
+                            $iconColor = $isImage ? '#10b981' : ($isPdf ? '#ef4444' : '#6b7280');
+                        ?>
+                        <li class="doc-item" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px;">
+                            <div class="doc-info" style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
+                                <i class="fas <?php echo $iconClass; ?>" style="font-size:24px;color:<?php echo $iconColor; ?>;flex-shrink:0;"></i>
+                                <div style="min-width:0;">
+                                    <div style="font-weight:500;color:#1f2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px;">
+                                        <?php echo htmlspecialchars($primaryDoc['original_name']); ?>
+                                    </div>
+                                    <div style="font-size:12px;color:#6b7280;">
+                                        <?php echo number_format($primaryDoc['file_size'] / 1024, 1); ?> KB
+                                    </div>
                                 </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                    <?php else: ?>
-                    <p style="color:#666;">No uploaded complaint form found.</p>
-                    <?php endif; ?>
-
-                    <?php if (!empty($validIdDocs)): ?>
-                    <p style="margin-top:16px;font-size:13px;color:#333;font-weight:600;">
-                        🪪 Valid ID / Credentials:
-                    </p>
-                    <ul style="margin-top:4px;margin-left:18px;">
-                        <?php foreach ($validIdDocs as $doc): ?>
-                            <?php $url = "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $doc['file_name']; ?>
-                            <li style="margin-bottom:4px;">
-                                <a href="<?php echo htmlspecialchars($url); ?>" target="_blank">
-                                    <?php echo htmlspecialchars($doc['original_name']); ?>
+                            </div>
+                            <div class="doc-actions" style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                                <button type="button" class="btn btn-sm btn-outline doc-modal-btn" 
+                                        data-url="<?php echo htmlspecialchars($fileUrl); ?>" 
+                                        data-type="<?php echo $docType; ?>" 
+                                        data-name="<?php echo htmlspecialchars($primaryDoc['original_name']); ?>" 
+                                        title="View in popup">
+                                    <i class="fas fa-expand"></i> View
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline doc-print-btn" data-url="<?php echo htmlspecialchars($fileUrl); ?>" data-type="<?php echo $docType; ?>" title="Print">
+                                    <i class="fas fa-print"></i>
+                                </button>
+                                <a href="<?php echo htmlspecialchars($fileUrl); ?>" download="<?php echo htmlspecialchars($primaryDoc['original_name']); ?>" class="btn btn-sm btn-primary" title="Download" style="color:#fff !important;">
+                                    <i class="fas fa-download" style="color:#fff;"></i> <span class="d-none d-sm-inline">Download</span>
                                 </a>
-                                <span style="color:#666;font-size:12px;">(<?php echo number_format($doc['file_size'] / 1024, 1); ?> KB)</span>
-                            </li>
-                        <?php endforeach; ?>
+                            </div>
+                        </li>
                     </ul>
-                    <?php endif; ?>
-
-                    <?php if (!empty($supportingDocs)): ?>
-                    <p style="margin-top:16px;font-size:13px;color:#333;font-weight:600;">
-                        📎 Additional Supporting Documents:
-                    </p>
-                    <ul style="margin-top:4px;margin-left:18px;">
-                        <?php foreach ($supportingDocs as $doc): ?>
-                            <?php $url = "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $doc['file_name']; ?>
-                            <li style="margin-bottom:4px;">
-                                <a href="<?php echo htmlspecialchars($url); ?>" target="_blank">
-                                    <?php echo htmlspecialchars($doc['original_name']); ?>
-                                </a>
-                                <span style="color:#666;font-size:12px;">(<?php echo number_format($doc['file_size'] / 1024, 1); ?> KB)</span>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
-                    <?php endif; ?>
                 </div>
+                <?php else: ?>
+                <p style="color:#666;margin-bottom:20px;">No uploaded complaint form found.</p>
+                <?php endif; ?>
+
+                <!-- Valid ID / Credentials -->
+                <?php if (!empty($validIdDocs)): ?>
+                <div class="doc-category-section" style="margin-bottom:24px;">
+                    <h4 style="margin:0 0 12px;font-size:14px;font-weight:600;color:#374151;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-id-card" style="color:#0f4c75;"></i> Valid ID / Credentials:
+                    </h4>
+                    <ul class="doc-list" style="list-style:none;padding:0;margin:0;">
+                        <?php foreach ($validIdDocs as $doc): 
+                            $fileExt = strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
+                            $isImage = in_array($fileExt, ['jpg','jpeg','png','gif','webp']);
+                            $isPdf = ($fileExt === 'pdf');
+                            $docType = $isImage ? 'image' : ($isPdf ? 'pdf' : 'other');
+                            $fileUrl = "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $doc['file_name'];
+                            $iconClass = $isImage ? 'fa-image' : ($isPdf ? 'fa-file-pdf' : 'fa-file');
+                            $iconColor = $isImage ? '#10b981' : ($isPdf ? '#ef4444' : '#6b7280');
+                        ?>
+                        <li class="doc-item" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px;">
+                            <div class="doc-info" style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
+                                <i class="fas <?php echo $iconClass; ?>" style="font-size:24px;color:<?php echo $iconColor; ?>;flex-shrink:0;"></i>
+                                <div style="min-width:0;">
+                                    <div style="font-weight:500;color:#1f2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px;">
+                                        <?php echo htmlspecialchars($doc['original_name']); ?>
+                                    </div>
+                                    <div style="font-size:12px;color:#6b7280;">
+                                        <?php echo number_format($doc['file_size'] / 1024, 1); ?> KB
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="doc-actions" style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                                <button type="button" class="btn btn-sm btn-outline doc-modal-btn" 
+                                        data-url="<?php echo htmlspecialchars($fileUrl); ?>" 
+                                        data-type="<?php echo $docType; ?>" 
+                                        data-name="<?php echo htmlspecialchars($doc['original_name']); ?>" 
+                                        title="View in popup">
+                                    <i class="fas fa-expand"></i> View
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline doc-print-btn" data-url="<?php echo htmlspecialchars($fileUrl); ?>" data-type="<?php echo $docType; ?>" title="Print">
+                                    <i class="fas fa-print"></i>
+                                </button>
+                                <a href="<?php echo htmlspecialchars($fileUrl); ?>" download="<?php echo htmlspecialchars($doc['original_name']); ?>" class="btn btn-sm btn-primary" title="Download" style="color:#fff !important;">
+                                    <i class="fas fa-download" style="color:#fff;"></i> <span class="d-none d-sm-inline">Download</span>
+                                </a>
+                            </div>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+                <?php endif; ?>
+
+                <!-- Supporting Documents -->
+                <?php if (!empty($supportingDocs)): ?>
+                <div class="doc-category-section" style="margin-bottom:24px;">
+                    <h4 style="margin:0 0 12px;font-size:14px;font-weight:600;color:#374151;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-paperclip" style="color:#0f4c75;"></i> Supporting Documents:
+                    </h4>
+                    <ul class="doc-list" style="list-style:none;padding:0;margin:0;">
+                        <?php foreach ($supportingDocs as $doc): 
+                            $fileExt = strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
+                            $isImage = in_array($fileExt, ['jpg','jpeg','png','gif','webp']);
+                            $isPdf = ($fileExt === 'pdf');
+                            $docType = $isImage ? 'image' : ($isPdf ? 'pdf' : 'other');
+                            $fileUrl = "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $doc['file_name'];
+                            $iconClass = $isImage ? 'fa-image' : ($isPdf ? 'fa-file-pdf' : 'fa-file');
+                            $iconColor = $isImage ? '#10b981' : ($isPdf ? '#ef4444' : '#6b7280');
+                        ?>
+                        <li class="doc-item" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px;">
+                            <div class="doc-info" style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
+                                <i class="fas <?php echo $iconClass; ?>" style="font-size:24px;color:<?php echo $iconColor; ?>;flex-shrink:0;"></i>
+                                <div style="min-width:0;">
+                                    <div style="font-weight:500;color:#1f2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px;">
+                                        <?php echo htmlspecialchars($doc['original_name']); ?>
+                                    </div>
+                                    <div style="font-size:12px;color:#6b7280;">
+                                        <?php echo number_format($doc['file_size'] / 1024, 1); ?> KB
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="doc-actions" style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                                <button type="button" class="btn btn-sm btn-outline doc-modal-btn" 
+                                        data-url="<?php echo htmlspecialchars($fileUrl); ?>" 
+                                        data-type="<?php echo $docType; ?>" 
+                                        data-name="<?php echo htmlspecialchars($doc['original_name']); ?>" 
+                                        title="View in popup">
+                                    <i class="fas fa-expand"></i> View
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline doc-print-btn" data-url="<?php echo htmlspecialchars($fileUrl); ?>" data-type="<?php echo $docType; ?>" title="Print">
+                                    <i class="fas fa-print"></i>
+                                </button>
+                                <a href="<?php echo htmlspecialchars($fileUrl); ?>" download="<?php echo htmlspecialchars($doc['original_name']); ?>" class="btn btn-sm btn-primary" title="Download" style="color:#fff !important;">
+                                    <i class="fas fa-download" style="color:#fff;"></i> <span class="d-none d-sm-inline">Download</span>
+                                </a>
+                            </div>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+                <?php endif; ?>
             </div>
             <?php else: ?>
             <p>No uploaded documents found for this complaint.</p>
@@ -693,7 +766,7 @@ include __DIR__ . '/includes/header.php';
                 <?php if (!empty($handwrittenDocs)): ?>
                 <div style="margin-bottom:16px;">
                     <strong>📝 Uploaded Completed Complaint-Assisted Form:</strong>
-                    <ul style="margin-top:8px;">
+                    <ul style="margin-top:8px;list-style:none;padding:0;">
                         <?php foreach ($handwrittenDocs as $doc): ?>
                         <?php
                             $fileUrl = "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $doc['file_name'];
@@ -702,16 +775,25 @@ include __DIR__ . '/includes/header.php';
                             $isPdf = ($ext === 'pdf');
                             $type = $isImage ? 'image' : ($isPdf ? 'pdf' : 'other');
                         ?>
-                        <li style="margin-bottom:6px;">
-                            <a href="javascript:void(0)"
-                               class="doc-link"
-                               data-url="<?php echo htmlspecialchars($fileUrl); ?>"
-                               data-type="<?php echo $type; ?>"
-                               data-name="<?php echo htmlspecialchars($doc['original_name']); ?>"
-                               <?php echo $docIndex === 0 ? 'data-default="1"' : ''; ?>>
-                                <?php echo htmlspecialchars($doc['original_name']); ?>
-                            </a>
-                            <span style="color:#666;font-size:12px;">(<?php echo number_format($doc['file_size'] / 1024, 1); ?> KB)</span>
+                        <li style="margin-bottom:10px;padding:10px;background:#f8f9fa;border-radius:6px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <i class="fas <?php echo $isImage ? 'fa-image' : ($isPdf ? 'fa-file-pdf' : 'fa-file'); ?>" style="color:<?php echo $isImage ? '#10b981' : ($isPdf ? '#ef4444' : '#6b7280'); ?>;font-size:1.2rem;"></i>
+                                <div>
+                                    <span style="font-weight:500;"><?php echo htmlspecialchars($doc['original_name']); ?></span>
+                                    <span style="color:#666;font-size:12px;display:block;"><?php echo number_format($doc['file_size'] / 1024, 1); ?> KB</span>
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:6px;">
+                                <button type="button" class="btn btn-sm btn-outline doc-modal-btn" data-url="<?php echo htmlspecialchars($fileUrl); ?>" data-type="<?php echo $type; ?>" data-name="<?php echo htmlspecialchars($doc['original_name']); ?>" title="View in popup">
+                                    <i class="fas fa-expand"></i> View
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline doc-print-btn" data-url="<?php echo htmlspecialchars($fileUrl); ?>" data-type="<?php echo $type; ?>" title="Print">
+                                    <i class="fas fa-print"></i>
+                                </button>
+                                <a href="<?php echo htmlspecialchars($fileUrl); ?>" download="<?php echo htmlspecialchars($doc['original_name']); ?>" class="btn btn-sm btn-primary" title="Download" style="color:#fff !important;">
+                                    <i class="fas fa-download" style="color:#fff;"></i> <span class="d-none d-sm-inline">Download</span>
+                                </a>
+                            </div>
                         </li>
                         <?php $docIndex++; endforeach; ?>
                     </ul>
@@ -721,7 +803,7 @@ include __DIR__ . '/includes/header.php';
                 <?php if (!empty($validIdDocs)): ?>
                 <div style="margin-bottom:16px;">
                     <strong>🪪 Valid ID / Credentials:</strong>
-                    <ul style="margin-top:8px;">
+                    <ul style="margin-top:8px;list-style:none;padding:0;">
                         <?php foreach ($validIdDocs as $doc): ?>
                         <?php
                             $fileUrl = "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $doc['file_name'];
@@ -730,16 +812,25 @@ include __DIR__ . '/includes/header.php';
                             $isPdf = ($ext === 'pdf');
                             $type = $isImage ? 'image' : ($isPdf ? 'pdf' : 'other');
                         ?>
-                        <li style="margin-bottom:6px;">
-                            <a href="javascript:void(0)"
-                               class="doc-link"
-                               data-url="<?php echo htmlspecialchars($fileUrl); ?>"
-                               data-type="<?php echo $type; ?>"
-                               data-name="<?php echo htmlspecialchars($doc['original_name']); ?>"
-                               <?php echo $docIndex === 0 ? 'data-default="1"' : ''; ?>>
-                                <?php echo htmlspecialchars($doc['original_name']); ?>
-                            </a>
-                            <span style="color:#666;font-size:12px;">(<?php echo number_format($doc['file_size'] / 1024, 1); ?> KB)</span>
+                        <li style="margin-bottom:10px;padding:10px;background:#f8f9fa;border-radius:6px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <i class="fas <?php echo $isImage ? 'fa-image' : ($isPdf ? 'fa-file-pdf' : 'fa-file'); ?>" style="color:<?php echo $isImage ? '#10b981' : ($isPdf ? '#ef4444' : '#6b7280'); ?>;font-size:1.2rem;"></i>
+                                <div>
+                                    <span style="font-weight:500;"><?php echo htmlspecialchars($doc['original_name']); ?></span>
+                                    <span style="color:#666;font-size:12px;display:block;"><?php echo number_format($doc['file_size'] / 1024, 1); ?> KB</span>
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:6px;">
+                                <button type="button" class="btn btn-sm btn-outline doc-modal-btn" data-url="<?php echo htmlspecialchars($fileUrl); ?>" data-type="<?php echo $type; ?>" data-name="<?php echo htmlspecialchars($doc['original_name']); ?>" title="View in popup">
+                                    <i class="fas fa-expand"></i> View
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline doc-print-btn" data-url="<?php echo htmlspecialchars($fileUrl); ?>" data-type="<?php echo $type; ?>" title="Print">
+                                    <i class="fas fa-print"></i>
+                                </button>
+                                <a href="<?php echo htmlspecialchars($fileUrl); ?>" download="<?php echo htmlspecialchars($doc['original_name']); ?>" class="btn btn-sm btn-primary" title="Download" style="color:#fff !important;">
+                                    <i class="fas fa-download" style="color:#fff;"></i> <span class="d-none d-sm-inline">Download</span>
+                                </a>
+                            </div>
                         </li>
                         <?php $docIndex++; endforeach; ?>
                     </ul>
@@ -749,7 +840,7 @@ include __DIR__ . '/includes/header.php';
                 <?php if (!empty($supportingDocs)): ?>
                 <div style="margin-bottom:16px;">
                     <strong>📎 Supporting Documents:</strong>
-                    <ul style="margin-top:8px;">
+                    <ul style="margin-top:8px;list-style:none;padding:0;">
                         <?php foreach ($supportingDocs as $doc): ?>
                         <?php
                             $fileUrl = "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $doc['file_name'];
@@ -758,38 +849,30 @@ include __DIR__ . '/includes/header.php';
                             $isPdf = ($ext === 'pdf');
                             $type = $isImage ? 'image' : ($isPdf ? 'pdf' : 'other');
                         ?>
-                        <li style="margin-bottom:6px;">
-                            <a href="javascript:void(0)"
-                               class="doc-link"
-                               data-url="<?php echo htmlspecialchars($fileUrl); ?>"
-                               data-type="<?php echo $type; ?>"
-                               data-name="<?php echo htmlspecialchars($doc['original_name']); ?>"
-                               <?php echo $docIndex === 0 ? 'data-default="1"' : ''; ?>>
-                                <?php echo htmlspecialchars($doc['original_name']); ?>
-                            </a>
-                            <span style="color:#666;font-size:12px;">(<?php echo number_format($doc['file_size'] / 1024, 1); ?> KB)</span>
+                        <li style="margin-bottom:10px;padding:10px;background:#f8f9fa;border-radius:6px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <i class="fas <?php echo $isImage ? 'fa-image' : ($isPdf ? 'fa-file-pdf' : 'fa-file'); ?>" style="color:<?php echo $isImage ? '#10b981' : ($isPdf ? '#ef4444' : '#6b7280'); ?>;font-size:1.2rem;"></i>
+                                <div>
+                                    <span style="font-weight:500;"><?php echo htmlspecialchars($doc['original_name']); ?></span>
+                                    <span style="color:#666;font-size:12px;display:block;"><?php echo number_format($doc['file_size'] / 1024, 1); ?> KB</span>
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:6px;">
+                                <button type="button" class="btn btn-sm btn-outline doc-modal-btn" data-url="<?php echo htmlspecialchars($fileUrl); ?>" data-type="<?php echo $type; ?>" data-name="<?php echo htmlspecialchars($doc['original_name']); ?>" title="View in popup">
+                                    <i class="fas fa-expand"></i> View
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline doc-print-btn" data-url="<?php echo htmlspecialchars($fileUrl); ?>" data-type="<?php echo $type; ?>" title="Print">
+                                    <i class="fas fa-print"></i>
+                                </button>
+                                <a href="<?php echo htmlspecialchars($fileUrl); ?>" download="<?php echo htmlspecialchars($doc['original_name']); ?>" class="btn btn-sm btn-primary" title="Download" style="color:#fff !important;">
+                                    <i class="fas fa-download" style="color:#fff;"></i> <span class="d-none d-sm-inline">Download</span>
+                                </a>
+                            </div>
                         </li>
                         <?php $docIndex++; endforeach; ?>
                     </ul>
                 </div>
                 <?php endif; ?>
-                <p style="margin-top:8px;font-size:12px;color:#666;">
-                    Click a file name to view the <strong>full document</strong> in the viewer below.
-                    The viewer will scale the content to fit the screen (scroll if there are multiple pages).
-                </p>
-                <div id="docZoomToolbar" style="margin-top:8px;display:flex;align-items:center;gap:8px;font-size:12px;color:#444;">
-                    <span>Zoom:</span>
-                    <button type="button" class="btn btn-sm btn-outline" data-zoom="out">−</button>
-                    <button type="button" class="btn btn-sm btn-outline" data-zoom="in">+</button>
-                    <button type="button" class="btn btn-sm btn-secondary" data-zoom="reset">Reset</button>
-                    <span id="docZoomLabel" style="margin-left:4px;">100%</span>
-                </div>
-                <div id="docPreviewContainer"
-                     style="margin-top:12px;width:100%;height:80vh;border:1px solid #ddd;border-radius:6px;background:#fafafa;display:flex;align-items:center;justify-content:center;overflow:auto;">
-                    <div style="text-align:center;color:#777;font-size:14px;padding:20px;">
-                        Select a document above to view it here as a full page.
-                    </div>
-                </div>
             </div>
             <?php endif; ?>
         <?php endif; ?>
@@ -1301,122 +1384,318 @@ function printDocument() {
     }
 }
 
-// Inline document preview for attached supporting documents with zoom controls
+// Document Modal Viewer for all document sections
 document.addEventListener('DOMContentLoaded', function () {
-    // --- Uploaded main form zoom ---
-    const uploadedContainer = document.getElementById('uploadedDocContainer');
-    const uploadedToolbar = document.getElementById('uploadedZoomToolbar');
-    const uploadedLabel = document.getElementById('uploadedZoomLabel');
+    // --- Document Modal Viewer ---
+    const docModal = document.getElementById('docViewerModal');
+    const docModalTitle = document.getElementById('docModalTitle');
+    const docModalContent = document.getElementById('docModalContent');
+    const docModalClose = document.getElementById('docModalClose');
+    const docModalOverlay = document.querySelector('.doc-modal-overlay');
+    const modalBtns = document.querySelectorAll('.doc-modal-btn');
+    const printBtns = document.querySelectorAll('.doc-print-btn');
+    const modalZoomToolbar = document.getElementById('modalZoomToolbar');
+    const modalZoomLabel = document.getElementById('modalZoomLabel');
+    const modalDownloadBtn = document.getElementById('modalDownloadBtn');
+    const modalPrintBtn = document.getElementById('modalPrintBtn');
 
-    if (uploadedContainer && uploadedToolbar) {
-        let upScale = 1;
-        const MIN_ZOOM = 0.5;
-        const MAX_ZOOM = 3;
-        const ZOOM_STEP = 0.25;
-
-        function applyUploadedZoom() {
-            const inner = uploadedContainer.querySelector('.uploaded-preview-inner');
-            if (inner) {
-                inner.style.transform = 'scale(' + upScale + ')';
-                inner.style.transformOrigin = 'top left';
-            }
-            if (uploadedLabel) {
-                uploadedLabel.textContent = Math.round(upScale * 100) + '%';
-            }
-        }
-
-        uploadedToolbar.addEventListener('click', function (e) {
-            const btn = e.target.closest('button[data-zoom]');
-            if (!btn) return;
-            const action = btn.getAttribute('data-zoom');
-            if (action === 'in') {
-                upScale = Math.min(MAX_ZOOM, upScale + ZOOM_STEP);
-            } else if (action === 'out') {
-                upScale = Math.max(MIN_ZOOM, upScale - ZOOM_STEP);
-            } else if (action === 'reset') {
-                upScale = 1;
-            }
-            applyUploadedZoom();
-        });
-
-        // Initialize
-        applyUploadedZoom();
-    }
-
-    // --- Supporting documents viewer with zoom ---
-    const container = document.getElementById('docPreviewContainer');
-    const links = document.querySelectorAll('.doc-link');
-    const zoomToolbar = document.getElementById('docZoomToolbar');
-    const zoomLabel = document.getElementById('docZoomLabel');
-
-    if (!container || !links.length) return;
-
-    let zoomScale = 1;
-    const MIN_ZOOM = 0.5;
-    const MAX_ZOOM = 3;
-    const ZOOM_STEP = 0.25;
-
-    function applyZoom() {
-        const inner = container.querySelector('.doc-preview-inner');
-        if (inner) {
-            inner.style.transform = 'scale(' + zoomScale + ')';
-            inner.style.transformOrigin = 'top left';
-        }
-        if (zoomLabel) {
-            zoomLabel.textContent = Math.round(zoomScale * 100) + '%';
-        }
-    }
-
-    function renderPreview(url, type, name) {
-        if (!url) return;
-        let contentHtml = '';
+    // Print document function
+    function printDocument(url, type) {
+        const printWindow = window.open('', '_blank');
         if (type === 'image') {
-            contentHtml = '<img src="' + url + '" alt="' + (name || 'Document image') + '" style="max-width:100%;height:auto;display:block;">';
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Print Document</title>
+                    <style>
+                        body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+                        img { max-width: 100%; max-height: 100vh; object-fit: contain; }
+                        @media print { body { margin: 0; } img { max-width: 100%; height: auto; } }
+                    </style>
+                </head>
+                <body>
+                    <img src="${url}" onload="window.print(); window.close();" />
+                </body>
+                </html>
+            `);
         } else if (type === 'pdf') {
-            contentHtml = '<embed src="' + url + '" type="application/pdf" style="width:100%;height:100%;border:none;" />';
+            printWindow.location.href = url;
+            printWindow.onload = function() {
+                setTimeout(function() {
+                    printWindow.print();
+                }, 500);
+            };
         } else {
-            contentHtml = '<div style="text-align:center;padding:20px;">' +
-                '<p style="margin-bottom:10px;">Preview not available for this file type.</p>' +
-                '<a href="' + url + '" target="_blank" class="btn btn-outline btn-sm">Open / Download</a>' +
-                '</div>';
+            printWindow.location.href = url;
         }
-        container.innerHTML = '<div class="doc-preview-inner" style="transform-origin:top left;">' + contentHtml + '</div>';
-        zoomScale = 1;
-        applyZoom();
+        printWindow.document.close();
     }
 
-    links.forEach(link => {
-        link.addEventListener('click', function () {
+    // Print buttons in document list
+    printBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
             const url = this.getAttribute('data-url');
             const type = this.getAttribute('data-type');
-            const name = this.getAttribute('data-name');
-            renderPreview(url, type, name);
+            printDocument(url, type);
         });
     });
 
-    if (zoomToolbar) {
-        zoomToolbar.addEventListener('click', function (e) {
-            const btn = e.target.closest('button[data-zoom]');
-            if (!btn) return;
-            const action = btn.getAttribute('data-zoom');
-            if (action === 'in') {
-                zoomScale = Math.min(MAX_ZOOM, zoomScale + ZOOM_STEP);
-            } else if (action === 'out') {
-                zoomScale = Math.max(MIN_ZOOM, zoomScale - ZOOM_STEP);
-            } else if (action === 'reset') {
-                zoomScale = 1;
-            }
-            applyZoom();
-        });
-    }
+    if (docModal && modalBtns.length) {
+        let modalZoom = 1;
+        const MIN_ZOOM = 0.25;
+        const MAX_ZOOM = 4;
+        const ZOOM_STEP = 0.25;
+        let currentDocUrl = '';
+        let currentDocName = '';
+        let currentDocType = '';
 
-    // Auto-load first document
-    const first = document.querySelector('.doc-link[data-default="1"]');
-    if (first) {
-        renderPreview(first.getAttribute('data-url'), first.getAttribute('data-type'), first.getAttribute('data-name'));
+        function applyModalZoom() {
+            const inner = docModalContent.querySelector('.modal-doc-inner');
+            if (inner) {
+                inner.style.transform = 'scale(' + modalZoom + ')';
+                inner.style.transformOrigin = 'top left';
+            }
+            if (modalZoomLabel) {
+                modalZoomLabel.textContent = Math.round(modalZoom * 100) + '%';
+            }
+        }
+
+        function openDocModal(url, type, name) {
+            currentDocUrl = url;
+            currentDocName = name;
+            currentDocType = type;
+            docModalTitle.textContent = name || 'Document Preview';
+            
+            let contentHtml = '';
+            if (type === 'image') {
+                contentHtml = '<div class="modal-doc-inner" style="transform-origin:top left;"><img src="' + url + '" alt="' + (name || 'Document') + '" style="max-width:100%;height:auto;display:block;"></div>';
+            } else if (type === 'pdf') {
+                contentHtml = '<div class="modal-doc-inner" style="width:100%;height:100%;"><embed src="' + url + '" type="application/pdf" style="width:100%;height:100%;min-height:70vh;border:none;" /></div>';
+            } else {
+                contentHtml = '<div class="modal-doc-inner" style="text-align:center;padding:40px;">' +
+                    '<i class="fas fa-file" style="font-size:4rem;color:#6b7280;margin-bottom:20px;"></i>' +
+                    '<p style="margin-bottom:20px;font-size:1.1rem;">Preview not available for this file type.</p>' +
+                    '<p style="color:#666;">Use the download button above to view this file.</p>' +
+                    '</div>';
+            }
+            
+            docModalContent.innerHTML = contentHtml;
+            modalZoom = 1;
+            applyModalZoom();
+            
+            // Update action buttons
+            if (modalDownloadBtn) {
+                modalDownloadBtn.href = url;
+                modalDownloadBtn.download = name;
+            }
+            
+            docModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeDocModal() {
+            docModal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Open modal on button click
+        modalBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const url = this.getAttribute('data-url');
+                const type = this.getAttribute('data-type');
+                const name = this.getAttribute('data-name');
+                openDocModal(url, type, name);
+            });
+        });
+
+        // Print from modal
+        if (modalPrintBtn) {
+            modalPrintBtn.addEventListener('click', function() {
+                if (currentDocUrl) {
+                    printDocument(currentDocUrl, currentDocType);
+                }
+            });
+        }
+
+        // Close modal
+        if (docModalClose) {
+            docModalClose.addEventListener('click', closeDocModal);
+        }
+        if (docModalOverlay) {
+            docModalOverlay.addEventListener('click', closeDocModal);
+        }
+
+        // Close on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && docModal.classList.contains('active')) {
+                closeDocModal();
+            }
+        });
+
+        // Zoom controls
+        if (modalZoomToolbar) {
+            modalZoomToolbar.addEventListener('click', function(e) {
+                const btn = e.target.closest('button[data-zoom]');
+                if (!btn) return;
+                const action = btn.getAttribute('data-zoom');
+                if (action === 'in') {
+                    modalZoom = Math.min(MAX_ZOOM, modalZoom + ZOOM_STEP);
+                } else if (action === 'out') {
+                    modalZoom = Math.max(MIN_ZOOM, modalZoom - ZOOM_STEP);
+                } else if (action === 'reset') {
+                    modalZoom = 1;
+                }
+                applyModalZoom();
+            });
+        }
     }
 });
 </script>
+
+<!-- Document Viewer Modal -->
+<div id="docViewerModal" class="doc-viewer-modal">
+    <div class="doc-modal-overlay"></div>
+    <div class="doc-modal-container">
+        <div class="doc-modal-header">
+            <h3 id="docModalTitle">Document Preview</h3>
+            <div class="doc-modal-actions">
+                <div id="modalZoomToolbar" style="display:flex;align-items:center;gap:6px;margin-right:12px;">
+                    <span style="font-size:12px;color:#666;">Zoom:</span>
+                    <button type="button" class="btn btn-sm btn-outline" data-zoom="out" title="Zoom out">−</button>
+                    <button type="button" class="btn btn-sm btn-outline" data-zoom="in" title="Zoom in">+</button>
+                    <button type="button" class="btn btn-sm btn-secondary" data-zoom="reset" title="Reset zoom">Reset</button>
+                    <span id="modalZoomLabel" style="font-size:12px;min-width:40px;">100%</span>
+                </div>
+                <button type="button" id="modalPrintBtn" class="btn btn-sm btn-outline" title="Print">
+                    <i class="fas fa-print"></i>
+                </button>
+                <a id="modalDownloadBtn" href="#" download class="btn btn-sm btn-primary" title="Download">
+                    <i class="fas fa-download"></i> Download
+                </a>
+                <button type="button" id="docModalClose" class="btn btn-sm btn-secondary" title="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        <div id="docModalContent" class="doc-modal-content">
+            <!-- Document content will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<style>
+/* Document Viewer Modal Styles */
+.doc-viewer-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+}
+
+.doc-viewer-modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.doc-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+}
+
+.doc-modal-container {
+    position: relative;
+    width: 95%;
+    max-width: 1200px;
+    height: 90vh;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.doc-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+    flex-shrink: 0;
+}
+
+.doc-modal-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
+}
+
+.doc-modal-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.doc-modal-content {
+    flex: 1;
+    overflow: auto;
+    padding: 20px;
+    background: #f3f4f6;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.doc-modal-content img {
+    max-width: 100%;
+    height: auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+}
+
+.modal-doc-inner {
+    transition: transform 0.2s ease;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .doc-modal-header {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    
+    .doc-modal-header h3 {
+        width: 100%;
+        max-width: none;
+    }
+    
+    .doc-modal-actions {
+        width: 100%;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+    
+    #modalZoomToolbar {
+        display: none !important;
+    }
+}
+</style>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>
 
