@@ -18,6 +18,7 @@ $isHandwritten = !empty($data['handwritten_mode']);
 // Handle final submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_submit'])) {
     require_once __DIR__ . '/models/Complaint.php';
+    require_once __DIR__ . '/services/email/ComplaintNotification.php';
     
     try {
         $complaint = new Complaint();
@@ -62,6 +63,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_submit'])) {
             }
         }
         
+        // Send email notifications (does not interrupt if fails)
+        try {
+            $notificationData = array_merge($complaintData, [
+                'id' => $complaintId,
+                'reference_number' => $referenceNumber
+            ]);
+            $emailNotification = new ComplaintNotification();
+            $emailNotification->sendComplaintSubmittedNotification($notificationData);
+        } catch (Exception $emailError) {
+            // Log email error but don't interrupt the submission process
+            error_log("Email notification error: " . $emailError->getMessage());
+        }
+        
         unset($_SESSION['form_data']);
         unset($_SESSION['form_files']);
         
@@ -77,6 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_submit'])) {
         $error = "An error occurred. Please try again.";
     }
 }
+
 
 // Checkmarks for referred to section
 // Public form no longer asks the complainant to select the routing unit,

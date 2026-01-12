@@ -1,0 +1,12 @@
+{
+    "name": "sdo-cts/complaint-system",
+    "authors": [
+        {
+            "name": "escall-dev",
+            "email": "joerenzescallente027@gmail.com"
+        }
+    ],
+    "require": {
+        "phpmailer/phpmailer": "^7.0"
+    }
+}

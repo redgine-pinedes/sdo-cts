@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
+                            <h1 style="color: #ffffff; margin: 0; font-size: 24px;">SDO CTS</h1>
+                            <p style="color: #bfdbfe; margin: 5px 0 0 0; font-size: 14px;">San Pedro Division Office<br>Complaint Tracking System</p>
+                        </td>
+                    </tr>
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 30px;">
+                            <h2 style="color: #059669; margin-bottom: 20px;">Complaint Resolved</h2>
+                            
+                            <p>Dear <strong>{{name}}</strong>,</p>
+                            
+                            <p>We are pleased to inform you that your complaint has been <strong style="color: #059669;">resolved</strong>.</p>
+                            
+                            <div style="background: #d1fae5; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0;">
+                                <p style="margin: 0; font-size: 14px; color: #065f46;"><strong>Event Type:</strong> Complaint Resolved</p>
+                                <p style="margin: 5px 0 0 0; font-size: 14px; color: #065f46;"><strong>Date & Time:</strong> {{date}}</p>
+                                <p style="margin: 10px 0 0 0;"><strong>Reference Number:</strong></p>
+                                <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: bold; color: #059669; font-family: monospace;">{{reference_number}}</p>
+                            </div>
+                            
+                            <h3 style="color: #1e40af;">Resolution Details</h3>
+                            <p style="background: #f8fafc; padding: 15px; border-radius: 4px; color: #475569;">{{resolution_notes}}</p>
+                            
+                            <p>You can view the complete details and history of your complaint at:</p>
+                            <p><a href="{{tracking_url}}" style="color: #0284c7;">{{tracking_url}}</a></p>
+                            
+                            <p style="margin-top: 20px;">Thank you for using the SDO CTS complaint tracking system. If you have any further concerns, please do not hesitate to file another complaint.</p>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f8fafc; padding: 20px; border-radius: 0 0 8px 8px; text-align: center; border-top: 1px solid #e2e8f0;">
+                            <p style="margin: 0; color: #64748b; font-size: 12px;">This is an automated message from the SDO CTS.</p>
+                            <p style="margin: 5px 0 0 0; color: #64748b; font-size: 12px;">Department of Education - San Pedro Division Office</p>
+                            <p style="margin: 10px 0 0 0; color: #94a3b8; font-size: 11px;">© 2026 SDO CTS. All rights reserved.</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

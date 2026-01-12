@@ -106,14 +106,56 @@ Default settings (can be modified in `config/database.php`):
 - Upload directory protection
 - Session-based data handling
 
-## Admin OAuth Configuration (Secrets)
+## Email Notifications
 
-The admin panel uses Google OAuth. To avoid committing secrets, configure them via environment variables. Copy `.env.example` to `.env` and fill in your values:
+The system includes email notifications using PHPMailer with SMTP. Notifications are sent:
+- **When a complaint is submitted** - Email sent to complainant and admin
+- **When a complaint is resolved** - Email sent to complainant
 
+### Email Configuration
+
+Configure email settings via environment variables in the `.env` file:
+
+```env
+# Enable/disable email notifications
+MAIL_ENABLED=true
+
+# SMTP Server Configuration
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_ENCRYPTION=tls
+SMTP_AUTH=true
+SMTP_USERNAME=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+
+# Sender Information
+MAIL_FROM_ADDRESS=noreply@your-domain.com
+MAIL_FROM_NAME=SDO CTS - San Pedro Division Office
+
+# Admin notification recipients (comma-separated)
+ADMIN_EMAIL_RECIPIENTS=admin@your-domain.com,supervisor@your-domain.com
+
+# System Base URL (for links in emails)
+SYSTEM_BASE_URL=http://localhost/SDO-cts
 ```
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-GOOGLE_REDIRECT_URI=http://localhost/SDO-cts/admin/auth/google-callback.php
+
+### Gmail/Google Workspace Setup
+1. Enable 2-Factor Authentication on your Google Account
+2. Generate an App Password at https://myaccount.google.com/apppasswords
+3. Use the App Password as `SMTP_PASSWORD`
+
+### Features
+- Duplicate email prevention (same event won't trigger multiple emails)
+- Email logging with success/failure status
+- Non-blocking (email failures don't interrupt complaint processing)
+- Customizable HTML email templates in `services/email/templates/`
+
+### Email Logs Migration
+Run the migration to create the email_logs table:
+```
+http://localhost/SDO-cts/migrate_email_logs.php
+```
+
 ```
 
 Notes:

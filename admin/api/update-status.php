@@ -5,6 +5,7 @@
 
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../../models/ComplaintAdmin.php';
+require_once __DIR__ . '/../../services/email/ComplaintNotification.php';
 
 $auth = auth();
 
@@ -40,12 +41,25 @@ try {
     $complaintModel = new ComplaintAdmin();
     $user = $auth->getUser();
     
+    // Get complaint data before update for email notification
+    $complaint = $complaintModel->getById($complaintId);
+    
     $complaintModel->updateStatus($complaintId, $status, $notes, $user['id'], $user['full_name']);
     
     // Log activity
-    $complaint = $complaintModel->getById($complaintId);
     $auth->logActivity('status_change', 'complaint', $complaintId, 
         "Changed status to " . STATUS_CONFIG[$status]['label'] . " for " . $complaint['reference_number']);
+    
+    // Send email notification when complaint is resolved
+    if ($status === 'resolved' && !empty($complaint['email_address'])) {
+        try {
+            $emailNotification = new ComplaintNotification();
+            $emailNotification->sendComplaintResolvedNotification($complaint, $notes);
+        } catch (Exception $emailError) {
+            // Log email error but don't interrupt the status update process
+            error_log("Email notification error on resolve: " . $emailError->getMessage());
+        }
+    }
     
     $_SESSION['flash_success'] = 'Status updated successfully.';
     
