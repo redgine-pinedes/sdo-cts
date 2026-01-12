@@ -291,6 +291,55 @@ function isChecked($field, $value) {
                     </div>
                 </div>
             </section>
+
+            <!-- Section 5.1: Valid ID / Credentials -->
+            <section class="form-section">
+                <div class="section-header">
+                    <span class="section-icon"><i class="fas fa-id-card"></i></span>
+                    Valid ID / Credentials
+                </div>
+                <div class="section-content">
+                    <div class="certification-box" style="font-size: 0.9rem; margin-bottom: 1.5rem; padding: 1rem;">
+                        <p>• Please attach a copy of your valid government-issued ID or credentials for verification purposes.</p>
+                        <p style="font-style: italic; color: var(--text-muted); margin-top: 0.5rem;">
+                            (Maaaring ilakip ang kopya ng inyong valid na ID na ibinigay ng gobyerno o mga kredensyal para sa beripikasyon)
+                        </p>
+                    </div>
+                    
+                    <?php 
+                    $validIdFiles = array_filter($formFiles, function($file) {
+                        return isset($file['category']) && $file['category'] === 'valid_id';
+                    });
+                    if (!empty($validIdFiles)): ?>
+                    <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <strong><i class="fas fa-id-card"></i> Previously uploaded ID/Credentials:</strong>
+                        <ul style="margin: 10px 0 0 20px;">
+                            <?php foreach ($validIdFiles as $file): ?>
+                            <li><?php echo htmlspecialchars($file['original_name']); ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <small style="color: #155724;">These files will be included unless you upload new ones.</small>
+                    </div>
+                    <?php endif; ?>
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            Upload Valid ID / Credentials <span class="required">*</span>
+                        </label>
+                        <div class="file-upload-area" id="validIdDropZone">
+                            <div class="upload-icon"><i class="fas fa-id-card"></i></div>
+                            <p><strong>Click to upload</strong> or drag and drop your ID here</p>
+                            <p class="file-types">Accepted formats: PDF, JPG, PNG (Max 10MB each)</p>
+                            <input type="file" name="valid_ids[]" id="validIdInput" 
+                                   accept=".pdf,.jpg,.jpeg,.png" multiple 
+                                   data-required="true">
+                        </div>
+                        <div class="file-list" id="validIdFileList"></div>
+                        <small style="color: var(--text-muted);">At least one valid ID or credential is required.</small>
+                    </div>
+                </div>
+            </section>
+
             <!-- Routing fields are for admin use only; set defaults via hidden inputs -->
             <input type="hidden" name="referred_to" value="OSDS">
             <input type="hidden" name="referred_to_other" value="">
@@ -470,54 +519,6 @@ function isChecked($field, $value) {
                                    accept=".pdf,.jpg,.jpeg,.png" multiple>
                         </div>
                         <div class="file-list" id="fileList"></div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Section 5.1: Valid ID / Credentials -->
-            <section class="form-section">
-                <div class="section-header">
-                    <span class="section-icon"><i class="fas fa-id-card"></i></span>
-                    Valid ID / Credentials
-                </div>
-                <div class="section-content">
-                    <div class="certification-box" style="font-size: 0.9rem; margin-bottom: 1.5rem; padding: 1rem;">
-                        <p>• Please attach a copy of your valid government-issued ID or credentials for verification purposes.</p>
-                        <p style="font-style: italic; color: var(--text-muted); margin-top: 0.5rem;">
-                            (Maaaring ilakip ang kopya ng inyong valid na ID na ibinigay ng gobyerno o mga kredensyal para sa beripikasyon)
-                        </p>
-                    </div>
-                    
-                    <?php 
-                    $validIdFiles = array_filter($formFiles, function($file) {
-                        return isset($file['category']) && $file['category'] === 'valid_id';
-                    });
-                    if (!empty($validIdFiles)): ?>
-                    <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                        <strong><i class="fas fa-id-card"></i> Previously uploaded ID/Credentials:</strong>
-                        <ul style="margin: 10px 0 0 20px;">
-                            <?php foreach ($validIdFiles as $file): ?>
-                            <li><?php echo htmlspecialchars($file['original_name']); ?></li>
-                            <?php endforeach; ?>
-                        </ul>
-                        <small style="color: #155724;">These files will be included unless you upload new ones.</small>
-                    </div>
-                    <?php endif; ?>
-                    
-                    <div class="form-group">
-                        <label class="form-label">
-                            Upload Valid ID / Credentials <span class="required">*</span>
-                        </label>
-                        <div class="file-upload-area" id="validIdDropZone">
-                            <div class="upload-icon"><i class="fas fa-id-card"></i></div>
-                            <p><strong>Click to upload</strong> or drag and drop your ID here</p>
-                            <p class="file-types">Accepted formats: PDF, JPG, PNG (Max 10MB each)</p>
-                            <input type="file" name="valid_ids[]" id="validIdInput" 
-                                   accept=".pdf,.jpg,.jpeg,.png" multiple 
-                                   data-required="true">
-                        </div>
-                        <div class="file-list" id="validIdFileList"></div>
-                        <small style="color: var(--text-muted);">At least one valid ID or credential is required.</small>
                     </div>
                 </div>
             </section>

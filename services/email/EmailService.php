@@ -205,6 +205,68 @@ class EmailService {
     }
 
     /**
+     * Send email with multiple attachments
+     * @param string|array $to Recipient email(s)
+     * @param string $subject Email subject
+     * @param string $body Email body (HTML)
+     * @param array $attachments Array of attachments, each with 'path' and optional 'name' keys
+     * @param string $eventType Event type for logging
+     * @param int|null $referenceId Reference ID for logging
+     * @return bool Success status
+     */
+    public function sendWithMultipleAttachments($to, $subject, $body, $attachments = [], $eventType = 'general', $referenceId = null) {
+        if (!MAIL_ENABLED) {
+            $this->logEmail(is_array($to) ? $to[0] : $to, $subject, $eventType, $referenceId, 'skipped', 'Email notifications disabled');
+            return true;
+        }
+
+        // Check for duplicate notification
+        if ($this->isDuplicateNotification($to, $eventType, $referenceId)) {
+            $this->logEmail(is_array($to) ? $to[0] : $to, $subject, $eventType, $referenceId, 'skipped', 'Duplicate notification prevented');
+            return true;
+        }
+
+        $this->resetMailer();
+
+        try {
+            $recipients = is_array($to) ? $to : [$to];
+            foreach ($recipients as $recipient) {
+                $this->mailer->addAddress(trim($recipient));
+            }
+
+            $this->mailer->Subject = $subject;
+            $this->mailer->Body = $body;
+            $this->mailer->AltBody = strip_tags(str_replace(['<br>', '<br/>', '<br />', '</p>'], "\n", $body));
+
+            // Add all attachments
+            foreach ($attachments as $attachment) {
+                if (isset($attachment['path']) && file_exists($attachment['path'])) {
+                    $attachmentName = $attachment['name'] ?? basename($attachment['path']);
+                    $this->mailer->addAttachment($attachment['path'], $attachmentName);
+                }
+            }
+
+            $this->mailer->send();
+            
+            foreach ($recipients as $recipient) {
+                $this->logEmail(trim($recipient), $subject, $eventType, $referenceId, 'sent');
+            }
+
+            return true;
+
+        } catch (Exception $e) {
+            $this->lastError = $this->mailer->ErrorInfo;
+            
+            $recipients = is_array($to) ? $to : [$to];
+            foreach ($recipients as $recipient) {
+                $this->logEmail(trim($recipient), $subject, $eventType, $referenceId, 'failed', $this->lastError);
+            }
+
+            return false;
+        }
+    }
+
+    /**
      * Check if notification was already sent (prevent duplicates)
      */
     private function isDuplicateNotification($to, $eventType, $referenceId) {

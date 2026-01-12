@@ -26,6 +26,7 @@ class ComplaintNotification {
     /**
      * Send notification when complaint is submitted
      * Notifies both complainant and admin
+     * Includes all uploaded documents as attachments for the complainant
      */
     public function sendComplaintSubmittedNotification($complaintData) {
         $referenceNumber = $complaintData['reference_number'];
@@ -34,27 +35,118 @@ class ComplaintNotification {
         $submittedDate = date('F j, Y \a\t g:i A');
         $complaintId = $complaintData['id'] ?? null;
 
-        // Send to complainant
-        $this->sendToComplainant($complainantEmail, $complainantName, $referenceNumber, $submittedDate, $complaintId);
+        // Gather all uploaded documents for attachments
+        $attachments = $this->getComplaintAttachments($complaintId);
 
-        // Send to admin/assigned office
+        // Send to complainant with attachments
+        $this->sendToComplainant($complainantEmail, $complainantName, $referenceNumber, $submittedDate, $complaintId, $attachments);
+
+        // Send to admin/assigned office (without attachments for security)
         $this->sendToAdmin($complaintData, $submittedDate);
 
         return true;
     }
 
     /**
-     * Send notification to complainant when complaint is submitted
+     * Get all attachments for a complaint
+     * Returns array of attachment info with paths and names
      */
-    private function sendToComplainant($email, $name, $referenceNumber, $date, $complaintId) {
+    private function getComplaintAttachments($complaintId) {
+        $attachments = [];
+        
+        if (!$complaintId) {
+            return $attachments;
+        }
+
+        // Base upload directory for this complaint
+        $uploadDir = dirname(dirname(__DIR__)) . '/uploads/complaints/' . $complaintId . '/';
+        
+        if (!is_dir($uploadDir)) {
+            return $attachments;
+        }
+
+        // Try to get document info from database for original names
+        try {
+            require_once dirname(dirname(__DIR__)) . '/config/database.php';
+            $db = Database::getInstance();
+            $sql = "SELECT file_name, original_name, category FROM complaint_documents WHERE complaint_id = ? ORDER BY upload_date ASC";
+            $documents = $db->query($sql, [$complaintId])->fetchAll();
+
+            foreach ($documents as $doc) {
+                $filePath = $uploadDir . $doc['file_name'];
+                if (file_exists($filePath)) {
+                    // Create a descriptive name with category prefix
+                    $categoryLabels = [
+                        'handwritten_form' => 'Complaint Form',
+                        'supporting' => 'Supporting Document',
+                        'valid_id' => 'Valid ID'
+                    ];
+                    $categoryLabel = $categoryLabels[$doc['category']] ?? 'Document';
+                    $displayName = $categoryLabel . ' - ' . $doc['original_name'];
+                    
+                    $attachments[] = [
+                        'path' => $filePath,
+                        'name' => $displayName
+                    ];
+                }
+            }
+        } catch (Exception $e) {
+            // If database query fails, try to get files directly from directory
+            error_log("Error fetching complaint documents: " . $e->getMessage());
+            
+            $files = glob($uploadDir . '*');
+            foreach ($files as $file) {
+                if (is_file($file)) {
+                    $attachments[] = [
+                        'path' => $file,
+                        'name' => basename($file)
+                    ];
+                }
+            }
+        }
+
+        return $attachments;
+    }
+
+    /**
+     * Send notification to complainant when complaint is submitted
+     * Includes all their uploaded documents as attachments
+     */
+    private function sendToComplainant($email, $name, $referenceNumber, $date, $complaintId, $attachments = []) {
         $subject = "Complaint Submitted - Reference: {$referenceNumber}";
+        
+        // Build attachment list for email body if there are attachments
+        $attachmentListHtml = '';
+        if (!empty($attachments)) {
+            $attachmentListHtml = '<h3 style="color: #1e40af; margin-top: 25px;">Attached Documents</h3>';
+            $attachmentListHtml .= '<p style="color: #475569; margin-bottom: 10px;">The following documents you provided are attached to this email for your records:</p>';
+            $attachmentListHtml .= '<ul style="color: #475569; margin-left: 20px;">';
+            foreach ($attachments as $attachment) {
+                $docName = htmlspecialchars($attachment['name'] ?? basename($attachment['path']));
+                $attachmentListHtml .= '<li>' . $docName . '</li>';
+            }
+            $attachmentListHtml .= '</ul>';
+        }
         
         $body = $this->getEmailTemplate('complaint_submitted_complainant', [
             'name' => $name,
             'reference_number' => $referenceNumber,
             'date' => $date,
-            'tracking_url' => TRACKING_URL
+            'tracking_url' => TRACKING_URL,
+            'attachment_list' => $attachmentListHtml
         ]);
+
+        // Use sendWithMultipleAttachments if there are attachments, otherwise use regular send
+        if (!empty($attachments)) {
+            return $this->emailService->sendWithMultipleAttachments(
+                $email,
+                $subject,
+                $body,
+                $attachments,
+                'complaint_submitted_complainant',
+                $complaintId
+            );
+        }
 
         return $this->emailService->send(
             $email,
@@ -82,7 +174,7 @@ class ComplaintNotification {
             'complainant_name' => $complaintData['name_pangalan'],
             'complainant_email' => $complaintData['email_address'],
             'complainant_contact' => $complaintData['contact_number'] ?? 'N/A',
-            'referred_to' => $complaintData['referred_to'] ?? 'OSDS',
+            'referred_to' => $complaintData['referred_to'] ?? '',
             'date' => $date,
             'complaint_preview' => $this->truncateText($complaintData['narration_complaint'] ?? '', 200),
             'admin_url' => SYSTEM_BASE_URL . '/admin/complaints.php'
@@ -193,9 +285,17 @@ class ComplaintNotification {
             $template = $this->getDefaultTemplate($templateName);
         }
 
+        // Variables that should NOT be HTML escaped (contain HTML content)
+        $htmlVariables = ['attachment_list'];
+
         // Replace variables
         foreach ($variables as $key => $value) {
-            $template = str_replace('{{' . $key . '}}', htmlspecialchars($value ?? ''), $template);
+            if (in_array($key, $htmlVariables)) {
+                // Don't escape HTML variables
+                $template = str_replace('{{' . $key . '}}', $value ?? '', $template);
+            } else {
+                $template = str_replace('{{' . $key . '}}', htmlspecialchars($value ?? ''), $template);
+            }
         }
 
         return $template;
@@ -215,7 +315,7 @@ class ComplaintNotification {
                 
                 <p>Dear <strong>{{name}}</strong>,</p>
                 
-                <p>Your complaint has been successfully submitted to the San Pedro Division Office Complaint Tracking System.</p>
+                <p>Your complaint has been successfully submitted to  The Schools Division Office of San Pedro City Complaint Tracking System.</p>
                 
                 <div style="background: #f0f9ff; border-left: 4px solid #0284c7; padding: 15px; margin: 20px 0;">
                     <p style="margin: 0; font-size: 14px; color: #64748b;"><strong>Event Type:</strong> Complaint Submission</p>
@@ -228,6 +328,8 @@ class ComplaintNotification {
                 
                 <p>You can track your complaint status at any time by visiting:</p>
                 <p><a href="{{tracking_url}}" style="color: #0284c7;">{{tracking_url}}</a></p>
+                
+                {{attachment_list}}
                 
                 <h3 style="color: #1e40af; margin-top: 30px;">What Happens Next?</h3>
                 <ol style="color: #475569;">
@@ -243,38 +345,34 @@ class ComplaintNotification {
                 
                 <p>A new complaint has been submitted to the system and requires attention.</p>
                 
-                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
-                    <p style="margin: 0; font-size: 14px; color: #92400e;"><strong>Event Type:</strong> New Complaint Submission</p>
-                    <p style="margin: 5px 0 0 0; font-size: 14px; color: #92400e;"><strong>Date & Time:</strong> {{date}}</p>
+                <div style="background: #f0f9ff; border-left: 4px solid #0284c7; padding: 15px; margin: 20px 0;">
+                    <p style="margin: 0; font-size: 14px; color: #64748b;"><strong>Event Type:</strong> New Complaint Submission</p>
+                    <p style="margin: 5px 0 0 0; font-size: 14px; color: #64748b;"><strong>Date & Time:</strong> {{date}}</p>
                     <p style="margin: 10px 0 0 0;"><strong>Reference Number:</strong></p>
-                    <p style="margin: 5px 0 0 0; font-size: 20px; font-weight: bold; color: #b45309; font-family: monospace;">{{reference_number}}</p>
+                    <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: bold; color: #0284c7; font-family: monospace;">{{reference_number}}</p>
                 </div>
                 
                 <h3 style="color: #1e40af;">Complainant Information</h3>
                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
                     <tr>
-                        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; color: #64748b; width: 40%;"><strong>Name:</strong></td>
-                        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">{{complainant_name}}</td>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; color: #64748b; width: 35%;"><strong>Name:</strong></td>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #fff;">{{complainant_name}}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; color: #64748b;"><strong>Email:</strong></td>
-                        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">{{complainant_email}}</td>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; color: #64748b;"><strong>Email:</strong></td>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #fff;"><a href="mailto:{{complainant_email}}" style="color: #0284c7;">{{complainant_email}}</a></td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; color: #64748b;"><strong>Contact:</strong></td>
-                        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">{{complainant_contact}}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; color: #64748b;"><strong>Referred To:</strong></td>
-                        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">{{referred_to}}</td>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; color: #64748b;"><strong>Contact:</strong></td>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #fff;">{{complainant_contact}}</td>
                     </tr>
                 </table>
                 
                 <h3 style="color: #1e40af;">Complaint Preview</h3>
-                <p style="background: #f8fafc; padding: 15px; border-radius: 4px; color: #475569;">{{complaint_preview}}</p>
+                <p style="background: #f0f9ff; padding: 15px; border-radius: 6px; color: #475569; border: 1px solid #bae6fd;">{{complaint_preview}}</p>
                 
-                <p style="margin-top: 25px;">
-                    <a href="{{admin_url}}" style="display: inline-block; background: #1e40af; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">View in Admin Panel</a>
+                <p style="margin-top: 25px; text-align: center;">
+                    <a href="{{admin_url}}" style="display: inline-block; background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 14px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 15px;">View in Admin Panel</a>
                 </p>
                 ' . $footer;
 
@@ -348,9 +446,9 @@ class ComplaintNotification {
                 <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <!-- Header -->
                     <tr>
-                        <td style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
+                        <td style="background: linear-gradient(135deg, #0a1628 0%, #0f4c75 100%); padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
                             <h1 style="color: #ffffff; margin: 0; font-size: 24px;">SDO CTS</h1>
-                            <p style="color: #bfdbfe; margin: 5px 0 0 0; font-size: 14px;">San Pedro Division Office<br>Complaint Tracking System</p>
+                            <p style="color: #bbe1fa; margin: 5px 0 0 0; font-size: 14px;">The Schools Division Office of San Pedro City<br>Complaint Tracking System</p>
                         </td>
                     </tr>
                     <!-- Content -->

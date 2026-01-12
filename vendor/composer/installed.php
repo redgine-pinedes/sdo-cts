@@ -3,7 +3,7 @@
         'name' => 'sdo-cts/complaint-system',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '1eb583307ad59b7a33a13b6306324fa206603b8d',
+        'reference' => '3dc9f7b382299a2cfee8b5492e17bf44ff9aee21',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -22,7 +22,7 @@
         'sdo-cts/complaint-system' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '1eb583307ad59b7a33a13b6306324fa206603b8d',
+            'reference' => '3dc9f7b382299a2cfee8b5492e17bf44ff9aee21',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

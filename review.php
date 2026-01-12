@@ -20,6 +20,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_submit'])) {
     require_once __DIR__ . '/models/Complaint.php';
     require_once __DIR__ . '/services/email/ComplaintNotification.php';
     
+    // If email was provided via the review page (bypass mode), update session data
+    if (!empty($_POST['bypass_email'])) {
+        $_SESSION['form_data']['email_address'] = trim($_POST['bypass_email']);
+        $data = $_SESSION['form_data']; // Refresh local data
+    }
+    
     try {
         $complaint = new Complaint();
         
@@ -619,14 +625,113 @@ $othersText = ($data['referred_to'] === 'Others' && !empty($data['referred_to_ot
             <?php endif; ?>
         <?php endif; ?>
 
+        <?php 
+        // Check if bypass mode is active and email is missing
+        $needsEmail = $isHandwritten && empty($data['email_address']);
+        ?>
+        
+        <?php if ($needsEmail): ?>
+        <!-- Email Required Prompt for Bypass Mode -->
+        <section class="form-section no-print" style="margin-top:20px; border: 2px solid var(--warning-color); background: #fff8e6;">
+            <div class="section-header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                <span class="section-icon"><i class="fas fa-envelope"></i></span>
+                Email Address Required
+            </div>
+            <div class="section-content">
+                <div style="margin-bottom: 1rem; color: #92400e;">
+                    <p><strong><i class="fas fa-info-circle"></i> Important:</strong> Since you uploaded a completed form, we need your email address to send you a confirmation and updates about your complaint.</p>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" for="bypass_email" style="font-weight: 600;">
+                        Your Email Address <span class="required">*</span>
+                    </label>
+                    <input type="email" 
+                           class="form-control" 
+                           id="bypass_email" 
+                           name="bypass_email_input" 
+                           placeholder="your.email@example.com" 
+                           required
+                           style="max-width: 400px;">
+                    <small style="color: var(--text-muted); display: block; margin-top: 0.5rem;">
+                        We will send your complaint reference number and status updates to this email.
+                    </small>
+                    <div id="emailError" style="color: #dc2626; font-size: 0.875rem; margin-top: 0.5rem; display: none;">
+                        <i class="fas fa-exclamation-circle"></i> Please enter a valid email address.
+                    </div>
+                </div>
+            </div>
+        </section>
+        <?php endif; ?>
+
         <!-- Action Buttons -->
-        <form method="POST" class="form-actions no-print" style="margin-top:20px;">
+        <form method="POST" class="form-actions no-print" style="margin-top:20px;" id="submitForm">
+            <?php if ($needsEmail): ?>
+            <input type="hidden" name="bypass_email" id="bypass_email_hidden" value="">
+            <?php endif; ?>
             <a href="index.php?edit=1" class="btn btn-secondary">⬅️ Go Back & Edit</a>
             <div style="display:flex;gap:10px;">
                 <button type="button" class="btn btn-outline" onclick="window.print()">🖨️ Print</button>
-                <button type="submit" name="confirm_submit" class="btn btn-success btn-lg">✅ Confirm & Submit</button>
+                <button type="submit" 
+                        name="confirm_submit" 
+                        class="btn btn-success btn-lg" 
+                        id="submitBtn"
+                        <?php echo $needsEmail ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''; ?>>
+                    ✅ Confirm & Submit
+                </button>
             </div>
         </form>
+        
+        <?php if ($needsEmail): ?>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const emailInput = document.getElementById('bypass_email');
+            const emailHidden = document.getElementById('bypass_email_hidden');
+            const submitBtn = document.getElementById('submitBtn');
+            const emailError = document.getElementById('emailError');
+            const submitForm = document.getElementById('submitForm');
+            
+            function validateEmail(email) {
+                const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return re.test(email);
+            }
+            
+            function updateSubmitButton() {
+                const email = emailInput.value.trim();
+                const isValid = validateEmail(email);
+                
+                if (email.length > 0 && !isValid) {
+                    emailError.style.display = 'block';
+                } else {
+                    emailError.style.display = 'none';
+                }
+                
+                if (isValid) {
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '1';
+                    submitBtn.style.cursor = 'pointer';
+                    emailHidden.value = email;
+                } else {
+                    submitBtn.disabled = true;
+                    submitBtn.style.opacity = '0.5';
+                    submitBtn.style.cursor = 'not-allowed';
+                    emailHidden.value = '';
+                }
+            }
+            
+            emailInput.addEventListener('input', updateSubmitButton);
+            emailInput.addEventListener('blur', updateSubmitButton);
+            
+            // Prevent form submission if email is invalid
+            submitForm.addEventListener('submit', function(e) {
+                if (!validateEmail(emailInput.value.trim())) {
+                    e.preventDefault();
+                    emailError.style.display = 'block';
+                    emailInput.focus();
+                }
+            });
+        });
+        </script>
+        <?php endif; ?>
 
         <footer class="form-footer no-print">
             <p>SDO CTS - San Pedro Division Office Complaint Tracking System</p>

@@ -54,11 +54,11 @@ $statusWorkflow = STATUS_WORKFLOW;
 // Primary flag is signature_type = 'uploaded_form' (new flow).
 // As a safety net for older/edge records, also treat it as uploaded-form
 // when core complainant fields are blank but there is at least one document.
+// Note: email_address is excluded from this check since bypass mode now captures email separately.
 $hasCoreFieldsEmpty = 
     empty(trim($complaint['name_pangalan'] ?? '')) &&
     empty(trim($complaint['address_tirahan'] ?? '')) &&
     empty(trim($complaint['contact_number'] ?? '')) &&
-    empty(trim($complaint['email_address'] ?? '')) &&
     empty(trim($complaint['narration_complaint'] ?? ''));
 
 $isUploadedForm = (($complaint['signature_type'] ?? '') === 'uploaded_form')
@@ -544,6 +544,26 @@ include __DIR__ . '/includes/header.php';
                 $primaryIsPdf = ($primaryExt === 'pdf');
             ?>
             <div class="uploaded-documents-section" style="padding:20px 0;">
+                <!-- Complainant Contact Info (Email captured during bypass submission) -->
+                <?php if (!empty($complaint['email_address'])): ?>
+                <div class="complainant-contact-card" style="margin-bottom:24px;padding:16px 20px;background:linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);border:1px solid #bae6fd;border-radius:10px;display:flex;align-items:center;gap:16px;">
+                    <div style="width:44px;height:44px;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="	fas fa-envelope-open-text" style="color:#fff;font-size:18px;"></i>
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:12px;font-weight:600;color:#0369a1;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">Complainant Email</div>
+                        <div style="font-size:15px;font-weight:500;color:#0c4a6e;">
+                            <a href="mailto:<?php echo htmlspecialchars($complaint['email_address']); ?>" style="color:#0c4a6e;text-decoration:none;">
+                                <?php echo htmlspecialchars($complaint['email_address']); ?>
+                            </a>
+                        </div>
+                    </div>
+                    <a href="https://mail.google.com/mail/?view=cm&to=<?php echo urlencode($complaint['email_address']); ?>" target="_blank" class="btn btn-sm btn-primary" title="Send Email via Gmail" style="color:#fff !important;">
+                        <i class="fab fa-google" style="color:#fff;"></i>
+                    </a>
+                </div>
+                <?php endif; ?>
+
                 <!-- Uploaded Complaint Form -->
                 <?php if ($primaryDoc): ?>
                 <div class="doc-category-section" style="margin-bottom:24px;">
