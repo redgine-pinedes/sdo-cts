@@ -406,8 +406,11 @@ function openStatusModal(userId, action, userName) {
         </div>
         <div class="modal-body">
             <div class="delete-warning">
-                <i class="fas fa-exclamation-triangle delete-warning-icon"></i>
-                <p id="deleteModalMessage">Are you sure you want to delete this user? This action cannot be undone.</p>
+                <p id="deleteModalMessage">
+                    <i class="fas fa-exclamation-triangle delete-warning-icon"></i>
+                    Are you sure you want to delete this user? This action cannot be undone.
+                </p>
+                <br>
                 <div id="deleteUserList" class="delete-user-list"></div>
             </div>
         </div>
@@ -545,7 +548,7 @@ function openDeleteModal(userId = null, userName = null) {
         usersToDelete = [userId];
         document.getElementById('deleteModalTitle').textContent = 'Delete User';
         document.getElementById('deleteModalMessage').textContent = 'Are you sure you want to delete this user? This action cannot be undone.';
-        deleteUserList.innerHTML = '<div class="delete-user-item"><i class="fas fa-user"></i> ' + userName + '</div>';
+        deleteUserList.innerHTML = '<div class="delete-user-item"><span class="delete-user-label">User:</span> <span class="delete-user-name">' + userName + '</span></div>';
     } else {
         // Multiple user deletion from checkboxes
         const checkboxes = document.querySelectorAll('.user-checkbox:checked');
@@ -556,7 +559,7 @@ function openDeleteModal(userId = null, userName = null) {
         
         checkboxes.forEach(cb => {
             usersToDelete.push(parseInt(cb.value));
-            deleteUserList.innerHTML += '<div class="delete-user-item"><i class="fas fa-user"></i> ' + cb.dataset.userName + '</div>';
+            deleteUserList.innerHTML += '<div class="delete-user-item"><span class="delete-user-label">User:</span> <span class="delete-user-name">' + cb.dataset.userName + '</span></div>';
         });
         
         const count = usersToDelete.length;
