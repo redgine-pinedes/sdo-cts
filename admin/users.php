@@ -50,6 +50,15 @@ include __DIR__ . '/includes/header.php';
     </div>
     <div class="page-header-right">
         <?php if ($auth->isSuperAdmin()): ?>
+        <button type="button" class="btn btn-outline" id="toggleDeleteModeBtn" onclick="toggleDeleteMode()">
+            <i class="fas fa-trash-alt"></i> Select Users to Delete
+        </button>
+        <button type="button" class="btn btn-danger" id="deleteSelectedBtn" style="display: none;" onclick="openDeleteModal()">
+            <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
+        </button>
+        <button type="button" class="btn btn-outline" id="cancelDeleteModeBtn" style="display: none;" onclick="toggleDeleteMode()">
+            <i class="fas fa-times"></i> Cancel
+        </button>
         <button type="button" class="btn btn-primary" onclick="openUserModal()">
             <i class="fas fa-user-plus"></i> Add User
         </button>
@@ -116,9 +125,14 @@ include __DIR__ . '/includes/header.php';
     </div>
     <?php else: ?>
     <div class="table-responsive">
-        <table class="data-table">
+        <table class="data-table" id="usersTable">
             <thead>
                 <tr>
+                    <?php if ($auth->isSuperAdmin()): ?>
+                    <th class="checkbox-column delete-mode-column" style="display: none;">
+                        <input type="checkbox" id="selectAllUsers" onchange="toggleSelectAll(this)" title="Select all users">
+                    </th>
+                    <?php endif; ?>
                     <th>User</th>
                     <th>Role</th>
                     <th>Unit</th>
@@ -130,7 +144,16 @@ include __DIR__ . '/includes/header.php';
             </thead>
             <tbody>
                 <?php foreach ($users as $user): ?>
-                <tr>
+                <tr data-user-id="<?php echo $user['id']; ?>">
+                    <?php if ($auth->isSuperAdmin()): ?>
+                    <td class="checkbox-column delete-mode-column" style="display: none;">
+                        <?php if ($user['id'] !== $auth->getUserId()): ?>
+                        <input type="checkbox" class="user-checkbox" value="<?php echo $user['id']; ?>" 
+                               data-user-name="<?php echo htmlspecialchars($user['full_name']); ?>"
+                               onchange="updateSelectedCount()">
+                        <?php endif; ?>
+                    </td>
+                    <?php endif; ?>
                     <td>
                         <div class="user-cell">
                             <?php if (!empty($user['avatar_url'])): ?>
@@ -177,21 +200,16 @@ include __DIR__ . '/includes/header.php';
                             
                             <?php if ($user['id'] !== $auth->getUserId()): ?>
                                 <?php if ($user['is_active']): ?>
-                                <form method="POST" action="/SDO-cts/admin/api/user-status.php" style="display:inline;">
-                                    <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
-                                    <input type="hidden" name="action" value="deactivate">
-                                    <input type="hidden" name="csrf_token" value="<?php echo $auth->generateCsrfToken(); ?>">
-                                    <button type="submit" class="btn btn-sm btn-outline" title="Deactivate" 
-                                            onclick="return confirm('Deactivate this user?')">Deactivate</button>
-                                </form>
+                                <button type="button" class="btn btn-sm btn-outline" title="Deactivate" 
+                                        onclick="openStatusModal(<?php echo $user['id']; ?>, 'deactivate', '<?php echo htmlspecialchars(addslashes($user['full_name'])); ?>')">Deactivate</button>
                                 <?php else: ?>
-                                <form method="POST" action="/SDO-cts/admin/api/user-status.php" style="display:inline;">
-                                    <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
-                                    <input type="hidden" name="action" value="activate">
-                                    <input type="hidden" name="csrf_token" value="<?php echo $auth->generateCsrfToken(); ?>">
-                                    <button type="submit" class="btn btn-sm btn-outline" title="Activate">Activate</button>
-                                </form>
+                                <button type="button" class="btn btn-sm btn-outline" title="Activate"
+                                        onclick="openStatusModal(<?php echo $user['id']; ?>, 'activate', '<?php echo htmlspecialchars(addslashes($user['full_name'])); ?>')">Activate</button>
                                 <?php endif; ?>
+                                <button type="button" class="btn btn-sm btn-danger-outline" title="Delete User"
+                                        onclick="openDeleteModal(<?php echo $user['id']; ?>, '<?php echo htmlspecialchars(addslashes($user['full_name'])); ?>')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
                             <?php endif; ?>
                             <?php else: ?>
                             <span class="text-muted">—</span>
@@ -325,9 +343,504 @@ document.getElementById('userForm').addEventListener('submit', function(e) {
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', (e) => {
         if (e.target === overlay) {
-            overlay.classList.remove('active');
+            // Special handling for PIN modal to restore transitions
+            if (overlay.id === 'pinModal') {
+                closePinModal();
+            } else {
+                overlay.classList.remove('active');
+            }
         }
     });
+});
+</script>
+
+<!-- User Status Change Confirmation Modal -->
+<div class="modal-overlay" id="statusModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="statusModalTitle">Confirm Action</h3>
+            <button type="button" class="modal-close" onclick="closeModal('statusModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p id="statusModalMessage">Are you sure you want to proceed?</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-outline" onclick="closeModal('statusModal')">Cancel</button>
+            <form method="POST" action="/SDO-cts/admin/api/user-status.php" id="statusForm" style="display:inline;">
+                <input type="hidden" name="user_id" id="statusUserId" value="">
+                <input type="hidden" name="action" id="statusAction" value="">
+                <input type="hidden" name="csrf_token" value="<?php echo $auth->generateCsrfToken(); ?>">
+                <button type="submit" class="btn btn-primary" id="statusConfirmBtn">Confirm</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function openStatusModal(userId, action, userName) {
+    document.getElementById('statusUserId').value = userId;
+    document.getElementById('statusAction').value = action;
+    
+    if (action === 'deactivate') {
+        document.getElementById('statusModalTitle').textContent = 'Deactivate User';
+        document.getElementById('statusModalMessage').textContent = 'Are you sure you want to deactivate ' + userName + '? They will no longer be able to log in.';
+        document.getElementById('statusConfirmBtn').textContent = 'Deactivate';
+        document.getElementById('statusConfirmBtn').className = 'btn btn-danger';
+    } else {
+        document.getElementById('statusModalTitle').textContent = 'Activate User';
+        document.getElementById('statusModalMessage').textContent = 'Are you sure you want to activate ' + userName + '? They will be able to log in again.';
+        document.getElementById('statusConfirmBtn').textContent = 'Activate';
+        document.getElementById('statusConfirmBtn').className = 'btn btn-primary';
+    }
+    
+    document.getElementById('statusModal').classList.add('active');
+}
+</script>
+
+<!-- Delete User Confirmation Modal -->
+<div class="modal-overlay" id="deleteModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="deleteModalTitle">Delete User</h3>
+            <button type="button" class="modal-close" onclick="closeModal('deleteModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="delete-warning">
+                <i class="fas fa-exclamation-triangle delete-warning-icon"></i>
+                <p id="deleteModalMessage">Are you sure you want to delete this user? This action cannot be undone.</p>
+                <div id="deleteUserList" class="delete-user-list"></div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-outline" onclick="closeModal('deleteModal')">Cancel</button>
+            <button type="button" class="btn btn-danger" onclick="confirmDelete()">Yes, delete this user</button>
+        </div>
+    </div>
+</div>
+
+<!-- Security PIN Modal -->
+<div class="modal-overlay" id="pinModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Security Verification</h3>
+            <button type="button" class="modal-close" onclick="closePinModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="pin-verification-info">
+                <i class="fas fa-shield-alt pin-icon"></i>
+                <p>Enter your 6-digit security PIN to confirm this action.</p>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Security PIN</label>
+                <div class="pin-input-container">
+                    <input type="password" id="securityPin" class="form-control pin-input" 
+                           maxlength="6" pattern="\d{6}" inputmode="numeric" 
+                           placeholder="• • • • • •" autocomplete="off">
+                </div>
+                <small class="form-hint">Enter your 6-digit numerical PIN</small>
+                <div id="attemptsInfo" class="attempts-info"></div>
+            </div>
+            <div id="pinError" class="alert alert-error" style="display: none;"></div>
+            <div id="cooldownMessage" class="alert alert-warning" style="display: none;">
+                <i class="fas fa-clock"></i> Too many failed attempts. Please wait <span id="cooldownTimer">60</span> seconds.
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-outline" onclick="closePinModal()">Cancel</button>
+            <button type="button" class="btn btn-danger" id="pinConfirmBtn" onclick="executeDelete()">
+                <i class="fas fa-trash"></i> Confirm Delete
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Delete mode state
+let isDeleteMode = false;
+
+// Toggle delete mode (show/hide checkboxes)
+function toggleDeleteMode() {
+    isDeleteMode = !isDeleteMode;
+    const checkboxColumns = document.querySelectorAll('.delete-mode-column');
+    const toggleBtn = document.getElementById('toggleDeleteModeBtn');
+    const cancelBtn = document.getElementById('cancelDeleteModeBtn');
+    const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+    const selectAllCheckbox = document.getElementById('selectAllUsers');
+    
+    if (isDeleteMode) {
+        // Show checkbox columns
+        checkboxColumns.forEach(col => col.style.display = '');
+        toggleBtn.style.display = 'none';
+        cancelBtn.style.display = 'inline-flex';
+        
+        // Add visual indicator to table
+        document.getElementById('usersTable').classList.add('delete-mode-active');
+    } else {
+        // Hide checkbox columns
+        checkboxColumns.forEach(col => col.style.display = 'none');
+        toggleBtn.style.display = 'inline-flex';
+        cancelBtn.style.display = 'none';
+        deleteSelectedBtn.style.display = 'none';
+        
+        // Uncheck all checkboxes
+        document.querySelectorAll('.user-checkbox').forEach(cb => cb.checked = false);
+        if (selectAllCheckbox) selectAllCheckbox.checked = false;
+        
+        // Remove visual indicator
+        document.getElementById('usersTable').classList.remove('delete-mode-active');
+    }
+}
+
+// Toggle select all checkboxes
+function toggleSelectAll(checkbox) {
+    const userCheckboxes = document.querySelectorAll('.user-checkbox');
+    userCheckboxes.forEach(cb => {
+        cb.checked = checkbox.checked;
+    });
+    updateSelectedCount();
+}
+
+// Update the selected count display
+function updateSelectedCount() {
+    const checkboxes = document.querySelectorAll('.user-checkbox:checked');
+    const count = checkboxes.length;
+    const deleteBtn = document.getElementById('deleteSelectedBtn');
+    const countSpan = document.getElementById('selectedCount');
+    
+    if (count > 0) {
+        deleteBtn.style.display = 'inline-flex';
+        countSpan.textContent = count;
+    } else {
+        deleteBtn.style.display = 'none';
+    }
+    
+    // Update select all checkbox state
+    const allCheckboxes = document.querySelectorAll('.user-checkbox');
+    const selectAll = document.getElementById('selectAllUsers');
+    if (selectAll) {
+        if (allCheckboxes.length > 0 && count === allCheckboxes.length) {
+            selectAll.checked = true;
+            selectAll.indeterminate = false;
+        } else if (count > 0) {
+            selectAll.checked = false;
+            selectAll.indeterminate = true;
+        } else {
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+        }
+    }
+}
+
+// Store user IDs to delete
+let usersToDelete = [];
+
+// Open delete modal for single user or selected users
+function openDeleteModal(userId = null, userName = null) {
+    usersToDelete = [];
+    const deleteUserList = document.getElementById('deleteUserList');
+    deleteUserList.innerHTML = '';
+    
+    if (userId) {
+        // Single user deletion
+        usersToDelete = [userId];
+        document.getElementById('deleteModalTitle').textContent = 'Delete User';
+        document.getElementById('deleteModalMessage').textContent = 'Are you sure you want to delete this user? This action cannot be undone.';
+        deleteUserList.innerHTML = '<div class="delete-user-item"><i class="fas fa-user"></i> ' + userName + '</div>';
+    } else {
+        // Multiple user deletion from checkboxes
+        const checkboxes = document.querySelectorAll('.user-checkbox:checked');
+        if (checkboxes.length === 0) {
+            alert('Please select at least one user to delete.');
+            return;
+        }
+        
+        checkboxes.forEach(cb => {
+            usersToDelete.push(parseInt(cb.value));
+            deleteUserList.innerHTML += '<div class="delete-user-item"><i class="fas fa-user"></i> ' + cb.dataset.userName + '</div>';
+        });
+        
+        const count = usersToDelete.length;
+        document.getElementById('deleteModalTitle').textContent = count === 1 ? 'Delete User' : 'Delete ' + count + ' Users';
+        document.getElementById('deleteModalMessage').textContent = count === 1 
+            ? 'Are you sure you want to delete this user? This action cannot be undone.'
+            : 'Are you sure you want to delete these ' + count + ' users? This action cannot be undone.';
+    }
+    
+    document.getElementById('deleteModal').classList.add('active');
+}
+
+// PIN attempt tracking
+let pinAttempts = 0;
+const maxAttempts = 3;
+let cooldownEndTime = null;
+let cooldownInterval = null;
+
+// Close PIN modal
+function closePinModal() {
+    const pinModal = document.getElementById('pinModal');
+    
+    // Re-enable transitions before closing (in case they were disabled)
+    pinModal.style.transition = '';
+    const modalInner = pinModal.querySelector('.modal');
+    if (modalInner) {
+        modalInner.style.transition = '';
+    }
+    
+    // Close the modal
+    pinModal.classList.remove('active');
+    
+    // Clear cooldown interval if running
+    if (cooldownInterval) {
+        clearInterval(cooldownInterval);
+        cooldownInterval = null;
+    }
+    
+    // Reset the PIN input
+    document.getElementById('securityPin').value = '';
+    document.getElementById('pinError').style.display = 'none';
+}
+
+// Update attempts display
+function updateAttemptsDisplay() {
+    const attemptsInfo = document.getElementById('attemptsInfo');
+    const remaining = maxAttempts - pinAttempts;
+    
+    if (pinAttempts > 0 && remaining > 0) {
+        attemptsInfo.innerHTML = '<i class="fas fa-info-circle"></i> ' + remaining + ' attempt' + (remaining !== 1 ? 's' : '') + ' remaining';
+        attemptsInfo.style.display = 'block';
+        attemptsInfo.className = 'attempts-info attempts-warning';
+    } else if (remaining <= 0) {
+        attemptsInfo.innerHTML = '<i class="fas fa-exclamation-circle"></i> No attempts remaining';
+        attemptsInfo.style.display = 'block';
+        attemptsInfo.className = 'attempts-info attempts-danger';
+    } else {
+        attemptsInfo.style.display = 'none';
+    }
+}
+
+// Start cooldown timer
+function startCooldown() {
+    cooldownEndTime = Date.now() + 60000; // 1 minute cooldown
+    document.getElementById('cooldownMessage').style.display = 'flex';
+    document.getElementById('pinConfirmBtn').disabled = true;
+    document.getElementById('securityPin').disabled = true;
+    document.getElementById('pinError').style.display = 'none';
+    
+    updateCooldownDisplay();
+    
+    cooldownInterval = setInterval(() => {
+        const remaining = Math.ceil((cooldownEndTime - Date.now()) / 1000);
+        
+        if (remaining <= 0) {
+            // Cooldown finished - reset attempts
+            clearInterval(cooldownInterval);
+            cooldownInterval = null;
+            cooldownEndTime = null;
+            pinAttempts = 0;
+            
+            document.getElementById('cooldownMessage').style.display = 'none';
+            document.getElementById('pinConfirmBtn').disabled = false;
+            document.getElementById('securityPin').disabled = false;
+            document.getElementById('securityPin').value = '';
+            updateAttemptsDisplay();
+        } else {
+            document.getElementById('cooldownTimer').textContent = remaining;
+        }
+    }, 1000);
+}
+
+// Update cooldown display
+function updateCooldownDisplay() {
+    const remaining = Math.ceil((cooldownEndTime - Date.now()) / 1000);
+    document.getElementById('cooldownTimer').textContent = Math.max(0, remaining);
+}
+
+// Confirm and execute delete immediately (no PIN verification)
+async function confirmDelete() {
+    const deleteModal = document.getElementById('deleteModal');
+    const confirmBtn = deleteModal.querySelector('button.btn-danger[onclick="confirmDelete()"]');
+    
+    // Disable button and show loading
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
+        const originalText = confirmBtn.innerHTML;
+        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+        
+        try {
+            const response = await fetch('/SDO-cts/admin/api/delete-user.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    user_ids: usersToDelete,
+                    csrf_token: '<?php echo $auth->generateCsrfToken(); ?>'
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Close modal immediately
+                deleteModal.classList.remove('active');
+                
+                // Show success message
+                showToast(result.message, 'success');
+                
+                // Reload page immediately
+                window.location.reload();
+            } else {
+                // Show error message
+                alert(result.message || 'Failed to delete user(s). Please try again.');
+                
+                // Re-enable button
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = originalText;
+            }
+        } catch (error) {
+            console.error('Delete error:', error);
+            alert('An error occurred while deleting. Please try again.');
+            
+            // Re-enable button
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = originalText;
+        }
+    }
+}
+
+// Execute the delete operation
+async function executeDelete() {
+    const pin = document.getElementById('securityPin').value;
+    const pinError = document.getElementById('pinError');
+    const confirmBtn = document.getElementById('pinConfirmBtn');
+    
+    // Check if in cooldown
+    if (cooldownEndTime && Date.now() < cooldownEndTime) {
+        pinError.textContent = 'Please wait for the cooldown to finish.';
+        pinError.style.display = 'block';
+        return;
+    }
+    
+    // Validate PIN format
+    if (!/^\d{6}$/.test(pin)) {
+        pinError.textContent = 'Please enter a valid 6-digit PIN.';
+        pinError.style.display = 'block';
+        return;
+    }
+    
+    // Disable button and show loading (1.5-2 sec max)
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+    pinError.style.display = 'none';
+    
+    // Minimum visual feedback time (1.5 seconds)
+    const startTime = Date.now();
+    
+    try {
+        const response = await fetch('/SDO-cts/admin/api/delete-user.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                user_ids: usersToDelete,
+                security_pin: pin,
+                csrf_token: '<?php echo $auth->generateCsrfToken(); ?>'
+            })
+        });
+        
+        const result = await response.json();
+        
+        // Ensure minimum 1.5 second loading time for smooth UX
+        const elapsed = Date.now() - startTime;
+        const remainingTime = Math.max(0, 1500 - elapsed);
+        
+        await new Promise(resolve => setTimeout(resolve, remainingTime));
+        
+        if (result.success) {
+            // Reset attempts on success
+            pinAttempts = 0;
+            
+            closePinModal();
+            
+            // Show success message and reload
+            showToast(result.message, 'success');
+            
+            // Remove deleted rows from table or reload page
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            // Increment attempts on failure
+            pinAttempts++;
+            updateAttemptsDisplay();
+            
+            if (pinAttempts >= maxAttempts) {
+                // Start cooldown
+                startCooldown();
+            } else {
+                pinError.textContent = result.message;
+                pinError.style.display = 'block';
+            }
+            
+            // If redirect is suggested (PIN not set)
+            if (result.redirect) {
+                setTimeout(() => {
+                    window.location.href = result.redirect;
+                }, 2000);
+            }
+        }
+    } catch (error) {
+        pinError.textContent = 'An error occurred. Please try again.';
+        pinError.style.display = 'block';
+    } finally {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="fas fa-trash"></i> Confirm Delete';
+    }
+}
+
+// Toast notification function
+function showToast(message, type = 'success') {
+    // Check if toast container exists, if not create it
+    let toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toastContainer';
+        toastContainer.className = 'toast-container';
+        document.body.appendChild(toastContainer);
+    }
+    
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-' + type;
+    toast.innerHTML = '<i class="fas fa-' + (type === 'success' ? 'check-circle' : 'exclamation-circle') + '"></i> ' + message;
+    
+    toastContainer.appendChild(toast);
+    
+    // Trigger animation
+    setTimeout(() => toast.classList.add('show'), 10);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Handle Enter key in PIN input
+document.addEventListener('DOMContentLoaded', function() {
+    const pinInput = document.getElementById('securityPin');
+    if (pinInput) {
+        pinInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                executeDelete();
+            }
+        });
+        
+        // Only allow numeric input
+        pinInput.addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+    }
 });
 </script>
 <?php endif; ?>
