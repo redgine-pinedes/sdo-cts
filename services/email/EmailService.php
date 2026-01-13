@@ -98,6 +98,25 @@ class EmailService {
     }
 
     /**
+     * Embed logo images for email templates
+     * This ensures logos display properly in all email clients
+     */
+    private function embedLogos() {
+        $sdoLogoPath = __DIR__ . '/../../assets/img/sdo-logo.jpg';
+        $bagongPilipinasLogoPath = __DIR__ . '/../../assets/img/bagongpilpinas-logo.png';
+
+        // Embed SDO logo
+        if (file_exists($sdoLogoPath)) {
+            $this->mailer->addEmbeddedImage($sdoLogoPath, 'sdo_logo', 'sdo-logo.jpg');
+        }
+
+        // Embed Bagong Pilipinas logo
+        if (file_exists($bagongPilipinasLogoPath)) {
+            $this->mailer->addEmbeddedImage($bagongPilipinasLogoPath, 'bagongpilipinas_logo', 'bagongpilipinas-logo.png');
+        }
+    }
+
+    /**
      * Set custom sender address
      */
     public function setFrom($email, $name = null) {
@@ -133,6 +152,9 @@ class EmailService {
             foreach ($recipients as $recipient) {
                 $this->mailer->addAddress(trim($recipient));
             }
+
+            // Embed logos for email templates
+            $this->embedLogos();
 
             $this->mailer->Subject = $subject;
             $this->mailer->Body = $body;
@@ -175,6 +197,9 @@ class EmailService {
             foreach ($recipients as $recipient) {
                 $this->mailer->addAddress(trim($recipient));
             }
+
+            // Embed logos for email templates
+            $this->embedLogos();
 
             $this->mailer->Subject = $subject;
             $this->mailer->Body = $body;
@@ -233,6 +258,9 @@ class EmailService {
             foreach ($recipients as $recipient) {
                 $this->mailer->addAddress(trim($recipient));
             }
+
+            // Embed logos for email templates
+            $this->embedLogos();
 
             $this->mailer->Subject = $subject;
             $this->mailer->Body = $body;

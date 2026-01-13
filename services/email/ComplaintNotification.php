@@ -13,6 +13,8 @@ class ComplaintNotification {
     private $emailService;
 
     public function __construct() {
+        // Set timezone to Manila, Philippines for accurate timestamps
+        date_default_timezone_set('Asia/Manila');
         $this->emailService = new EmailService();
     }
 
@@ -29,9 +31,18 @@ class ComplaintNotification {
      * Includes all uploaded documents as attachments for the complainant
      */
     public function sendComplaintSubmittedNotification($complaintData) {
+        // Validate required complainant information (existing form fields)
+        $complainantName = $complaintData['name_pangalan'] ?? null;
+        $complainantEmail = $complaintData['email_address'] ?? null;
+        $complainantContact = $complaintData['contact_number'] ?? null;
+        
+        // Check if any required field is missing
+        if (empty($complainantName) || empty($complainantEmail) || empty($complainantContact)) {
+            error_log("Email notification skipped: Missing required complainant information (name, email, or contact)");
+            return false;
+        }
+        
         $referenceNumber = $complaintData['reference_number'];
-        $complainantEmail = $complaintData['email_address'];
-        $complainantName = $complaintData['name_pangalan'];
         $submittedDate = date('F j, Y \a\t g:i A');
         $complaintId = $complaintData['id'] ?? null;
 
@@ -39,7 +50,7 @@ class ComplaintNotification {
         $attachments = $this->getComplaintAttachments($complaintId);
 
         // Send to complainant with attachments
-        $this->sendToComplainant($complainantEmail, $complainantName, $referenceNumber, $submittedDate, $complaintId, $attachments);
+        $this->sendToComplainant($complainantEmail, $complainantName, $referenceNumber, $submittedDate, $complaintId, $complaintData, $attachments);
 
         // Send to admin/assigned office (without attachments for security)
         $this->sendToAdmin($complaintData, $submittedDate);
@@ -112,13 +123,13 @@ class ComplaintNotification {
      * Send notification to complainant when complaint is submitted
      * Includes all their uploaded documents as attachments
      */
-    private function sendToComplainant($email, $name, $referenceNumber, $date, $complaintId, $attachments = []) {
+    private function sendToComplainant($email, $name, $referenceNumber, $date, $complaintId, $complaintData, $attachments = []) {
         $subject = "Complaint Submitted - Reference: {$referenceNumber}";
         
         // Build attachment list for email body if there are attachments
         $attachmentListHtml = '';
         if (!empty($attachments)) {
-            $attachmentListHtml = '<h3 style="color: #1e40af; margin-top: 25px;">Attached Documents</h3>';
+            $attachmentListHtml = '<h3 style="color: #0f4c75; margin-top: 25px;">Attached Documents</h3>';
             $attachmentListHtml .= '<p style="color: #475569; margin-bottom: 10px;">The following documents you provided are attached to this email for your records:</p>';
             $attachmentListHtml .= '<ul style="color: #475569; margin-left: 20px;">';
             foreach ($attachments as $attachment) {
@@ -132,8 +143,12 @@ class ComplaintNotification {
             'name' => $name,
             'reference_number' => $referenceNumber,
             'date' => $date,
+            'complaint_name' => $complaintData['name_pangalan'] ?? $name,
+            'complaint_email' => $complaintData['email_address'] ?? $email,
+            'complaint_contact' => $complaintData['contact_number'] ?? 'N/A',
             'tracking_url' => TRACKING_URL,
-            'attachment_list' => $attachmentListHtml
+            'attachment_list' => $attachmentListHtml,
+            'base_url' => SYSTEM_BASE_URL
         ]);
 
         // Use sendWithMultipleAttachments if there are attachments, otherwise use regular send
@@ -171,13 +186,14 @@ class ComplaintNotification {
         
         $body = $this->getEmailTemplate('complaint_submitted_admin', [
             'reference_number' => $complaintData['reference_number'],
-            'complainant_name' => $complaintData['name_pangalan'],
-            'complainant_email' => $complaintData['email_address'],
-            'complainant_contact' => $complaintData['contact_number'] ?? 'N/A',
+            'complaint_name' => $complaintData['name_pangalan'] ?? 'N/A',
+            'complaint_email' => $complaintData['email_address'] ?? 'N/A',
+            'complaint_contact' => $complaintData['contact_number'] ?? 'N/A',
             'referred_to' => $complaintData['referred_to'] ?? '',
             'date' => $date,
             'complaint_preview' => $this->truncateText($complaintData['narration_complaint'] ?? '', 200),
-            'admin_url' => SYSTEM_BASE_URL . '/admin/complaints.php'
+            'admin_url' => SYSTEM_BASE_URL . '/admin/complaints.php',
+            'base_url' => SYSTEM_BASE_URL
         ]);
 
         foreach ($adminEmails as $adminEmail) {
@@ -210,7 +226,8 @@ class ComplaintNotification {
             'reference_number' => $referenceNumber,
             'date' => $resolvedDate,
             'resolution_notes' => $resolutionNotes ?: 'Your complaint has been reviewed and resolved.',
-            'tracking_url' => TRACKING_URL
+            'tracking_url' => TRACKING_URL,
+            'base_url' => SYSTEM_BASE_URL
         ]);
 
         return $this->emailService->send(
@@ -242,7 +259,8 @@ class ComplaintNotification {
             'status' => $statusLabel,
             'notes' => $notes,
             'date' => $updateDate,
-            'tracking_url' => TRACKING_URL
+            'tracking_url' => TRACKING_URL,
+            'base_url' => SYSTEM_BASE_URL
         ]);
 
         return $this->emailService->send(
@@ -329,6 +347,22 @@ class ComplaintNotification {
                 <p>You can track your complaint status at any time by visiting:</p>
                 <p><a href="{{tracking_url}}" style="color: #0284c7;">{{tracking_url}}</a></p>
                 
+                <h3 style="color: #1e40af; margin-top: 30px;">Complainant Information</h3>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                    <tr>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; color: #64748b; width: 35%;"><strong>Name:</strong></td>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #fff;">{{complaint_name}}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; color: #64748b;"><strong>Email:</strong></td>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #fff;"><a href="mailto:{{complaint_email}}" style="color: #0284c7;">{{complaint_email}}</a></td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; color: #64748b;"><strong>Contact:</strong></td>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #fff;">{{complaint_contact}}</td>
+                    </tr>
+                </table>
+                
                 {{attachment_list}}
                 
                 <h3 style="color: #1e40af; margin-top: 30px;">What Happens Next?</h3>
@@ -356,15 +390,15 @@ class ComplaintNotification {
                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
                     <tr>
                         <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; color: #64748b; width: 35%;"><strong>Name:</strong></td>
-                        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #fff;">{{complainant_name}}</td>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #fff;">{{complaint_name}}</td>
                     </tr>
                     <tr>
                         <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; color: #64748b;"><strong>Email:</strong></td>
-                        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #fff;"><a href="mailto:{{complainant_email}}" style="color: #0284c7;">{{complainant_email}}</a></td>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #fff;"><a href="mailto:{{complaint_email}}" style="color: #0284c7;">{{complaint_email}}</a></td>
                     </tr>
                     <tr>
                         <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; color: #64748b;"><strong>Contact:</strong></td>
-                        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #fff;">{{complainant_contact}}</td>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #fff;">{{complaint_contact}}</td>
                     </tr>
                 </table>
                 
@@ -446,9 +480,21 @@ class ComplaintNotification {
                 <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <!-- Header -->
                     <tr>
-                        <td style="background: linear-gradient(135deg, #0a1628 0%, #0f4c75 100%); padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
-                            <h1 style="color: #ffffff; margin: 0; font-size: 24px;">SDO CTS</h1>
-                            <p style="color: #bbe1fa; margin: 5px 0 0 0; font-size: 14px;">The Schools Division Office of San Pedro City<br>Complaint Tracking System</p>
+                        <td style="background: linear-gradient(135deg, #0a1628 0%, #0f4c75 100%); padding: 30px; border-radius: 8px 8px 0 0;">
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td width="80" align="left" valign="middle">
+                                        <img src="cid:sdo_logo" alt="SDO Logo" width="70" height="70" style="border-radius: 50%; display: block;">
+                                    </td>
+                                    <td align="center" valign="middle">
+                                        <h1 style="color: #ffffff; margin: 0; font-size: 24px;">SDO CTS</h1>
+                                        <p style="color: #bbe1fa; margin: 5px 0 0 0; font-size: 14px;">The Schools Division Office of San Pedro City<br>Complaint Tracking System</p>
+                                    </td>
+                                    <td width="80" align="right" valign="middle">
+                                        <img src="cid:bagongpilipinas_logo" alt="Bagong Pilipinas Logo" width="70" height="70" style="display: block;">
+                                    </td>
+                                </tr>
+                            </table>
                         </td>
                     </tr>
                     <!-- Content -->

@@ -20,84 +20,99 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_submit'])) {
     require_once __DIR__ . '/models/Complaint.php';
     require_once __DIR__ . '/services/email/ComplaintNotification.php';
     
-    // If email was provided via the review page (bypass mode), update session data
-    if (!empty($_POST['bypass_email'])) {
-        $_SESSION['form_data']['email_address'] = trim($_POST['bypass_email']);
-        $data = $_SESSION['form_data']; // Refresh local data
+    // Get complaint information from form data
+    $complainantName = $data['name_pangalan'] ?? '';
+    $complainantEmail = $data['email_address'] ?? '';
+    $complainantContact = $data['contact_number'] ?? '';
+    
+    // For bypass mode, get values from review page inputs
+    if ($isHandwritten) {
+        $complainantName = trim($_POST['bypass_name'] ?? $complainantName);
+        $complainantEmail = trim($_POST['bypass_email'] ?? $complainantEmail);
+        $complainantContact = trim($_POST['bypass_contact'] ?? $complainantContact);
     }
     
-    try {
-        $complaint = new Complaint();
+    // Validate all required fields
+    if (empty($complainantName) || empty($complainantEmail) || empty($complainantContact)) {
+        $error = "Error: Complainant information is incomplete. Please fill in Name, Email, and Contact Number.";
+    } else {
+        // Update form data with validated information
+        $data['name_pangalan'] = $complainantName;
+        $data['email_address'] = $complainantEmail;
+        $data['contact_number'] = $complainantContact;
         
-        $complaintData = [
-            'referred_to' => $data['referred_to'] ?? 'OSDS',
-            'referred_to_other' => $data['referred_to_other'] ?? null,
-            'name_pangalan' => $data['name_pangalan'] ?? null,
-            'address_tirahan' => $data['address_tirahan'] ?? null,
-            'contact_number' => $data['contact_number'] ?? null,
-            'email_address' => $data['email_address'] ?? null,
-            'involved_full_name' => $data['involved_full_name'] ?? null,
-            'involved_position' => $data['involved_position'] ?? null,
-            'involved_address' => $data['involved_address'] ?? null,
-            'involved_school_office_unit' => $data['involved_school_office_unit'] ?? null,
-            'narration_complaint' => $data['narration_complaint'] ?? null,
-            'narration_complaint_page2' => $data['narration_complaint_page2'] ?? null,
-            'desired_action_relief' => $data['desired_action_relief'] ?? null,
-            'certification_agreed' => !empty($data['certification_agreed']),
-            'printed_name_pangalan' => $data['typed_signature'] ?? ($data['name_pangalan'] ?? null),
-            'signature_type' => $isHandwritten ? 'uploaded_form' : 'typed',
-            'signature_data' => $isHandwritten ? null : ($data['typed_signature'] ?? ($data['name_pangalan'] ?? null))
-        ];
-        
-        $result = $complaint->create($complaintData);
-        $complaintId = $result['id'];
-        $referenceNumber = $result['reference_number'];
-        
-        if (!empty($files)) {
-            $uploadDir = __DIR__ . '/uploads/complaints/' . $complaintId . '/';
-            $tempDir = __DIR__ . '/uploads/temp/';
-            if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+        try {
+            $complaint = new Complaint();
             
-            foreach ($files as $file) {
-                $tempPath = $tempDir . $file['temp_name'];
-                $newPath = $uploadDir . $file['temp_name'];
-                if (file_exists($tempPath)) {
-                    rename($tempPath, $newPath);
-                    $category = $file['category'] ?? 'supporting';
-                    $complaint->addDocument($complaintId, $file['temp_name'], $file['original_name'], $file['type'], $file['size'], $category);
+            $complaintData = [
+                'referred_to' => $data['referred_to'] ?? 'OSDS',
+                'referred_to_other' => $data['referred_to_other'] ?? null,
+                'name_pangalan' => $complainantName,
+                'address_tirahan' => $data['address_tirahan'] ?? null,
+                'contact_number' => $complainantContact,
+                'email_address' => $complainantEmail,
+                'involved_full_name' => $data['involved_full_name'] ?? null,
+                'involved_position' => $data['involved_position'] ?? null,
+                'involved_address' => $data['involved_address'] ?? null,
+                'involved_school_office_unit' => $data['involved_school_office_unit'] ?? null,
+                'narration_complaint' => $data['narration_complaint'] ?? null,
+                'narration_complaint_page2' => $data['narration_complaint_page2'] ?? null,
+                'desired_action_relief' => $data['desired_action_relief'] ?? null,
+                'certification_agreed' => !empty($data['certification_agreed']),
+                'printed_name_pangalan' => $data['typed_signature'] ?? $complainantName,
+                'signature_type' => $isHandwritten ? 'uploaded_form' : 'typed',
+                'signature_data' => $isHandwritten ? null : ($data['typed_signature'] ?? $complainantName)
+            ];
+            
+            $result = $complaint->create($complaintData);
+            $complaintId = $result['id'];
+            $referenceNumber = $result['reference_number'];
+            
+            if (!empty($files)) {
+                $uploadDir = __DIR__ . '/uploads/complaints/' . $complaintId . '/';
+                $tempDir = __DIR__ . '/uploads/temp/';
+                if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+                
+                foreach ($files as $file) {
+                    $tempPath = $tempDir . $file['temp_name'];
+                    $newPath = $uploadDir . $file['temp_name'];
+                    if (file_exists($tempPath)) {
+                        rename($tempPath, $newPath);
+                        $category = $file['category'] ?? 'supporting';
+                        $complaint->addDocument($complaintId, $file['temp_name'], $file['original_name'], $file['type'], $file['size'], $category);
+                    }
                 }
             }
+            
+            // Send email notifications (does not interrupt if fails)
+            try {
+                $notificationData = array_merge($complaintData, [
+                    'id' => $complaintId,
+                    'reference_number' => $referenceNumber
+                ]);
+                $emailNotification = new ComplaintNotification();
+                $emailNotification->sendComplaintSubmittedNotification($notificationData);
+            } catch (Exception $emailError) {
+                // Log email error but don't interrupt the submission process
+                error_log("Email notification error: " . $emailError->getMessage());
+            }
+            
+            unset($_SESSION['form_data']);
+            unset($_SESSION['form_files']);
+            
+            $_SESSION['submission_success'] = [
+                'reference_number' => $referenceNumber,
+                'email' => $complainantEmail
+            ];
+            
+            header('Location: success.php');
+            exit;
+            
+        } catch (Exception $e) {
+            $error = "An error occurred. Please try again.";
         }
-        
-        // Send email notifications (does not interrupt if fails)
-        try {
-            $notificationData = array_merge($complaintData, [
-                'id' => $complaintId,
-                'reference_number' => $referenceNumber
-            ]);
-            $emailNotification = new ComplaintNotification();
-            $emailNotification->sendComplaintSubmittedNotification($notificationData);
-        } catch (Exception $emailError) {
-            // Log email error but don't interrupt the submission process
-            error_log("Email notification error: " . $emailError->getMessage());
-        }
-        
-        unset($_SESSION['form_data']);
-        unset($_SESSION['form_files']);
-        
-        $_SESSION['submission_success'] = [
-            'reference_number' => $referenceNumber,
-            'email' => $complaintData['email_address']
-        ];
-        
-        header('Location: success.php');
-        exit;
-        
-    } catch (Exception $e) {
-        $error = "An error occurred. Please try again.";
     }
 }
-
 
 // Checkmarks for referred to section
 // Public form no longer asks the complainant to select the routing unit,
@@ -626,68 +641,144 @@ $othersText = ($data['referred_to'] === 'Others' && !empty($data['referred_to_ot
         <?php endif; ?>
 
         <?php 
-        // Check if bypass mode is active and email is missing
-        $needsEmail = $isHandwritten && empty($data['email_address']);
+        // Check if bypass mode is active
+        $needsComplainantInfo = $isHandwritten && (empty($data['name_pangalan']) || empty($data['email_address']) || empty($data['contact_number']));
         ?>
         
-        <?php if ($needsEmail): ?>
-        <!-- Email Required Prompt for Bypass Mode -->
-        <section class="form-section no-print" style="margin-top:20px; border: 2px solid var(--warning-color); background: #fff8e6;">
+        <!-- Form wrapper - includes both complainant info inputs and action buttons -->
+        <form method="POST" class="no-print" id="submitForm">
+        
+        <?php if ($needsComplainantInfo): ?>
+        <!-- Bypass Mode: Collect Complainant Information -->
+        <section class="form-section" style="margin-top:20px; border: 2px solid var(--warning-color); background: #fff8e6;">
             <div class="section-header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
-                <span class="section-icon"><i class="fas fa-envelope"></i></span>
-                Email Address Required
+                <span class="section-icon"><i class="fas fa-user-circle"></i></span>
+                Complainant Information
             </div>
             <div class="section-content">
-                <div style="margin-bottom: 1rem; color: #92400e;">
-                    <p><strong><i class="fas fa-info-circle"></i> Important:</strong> Since you uploaded a completed form, we need your email address to send you a confirmation and updates about your complaint.</p>
+                <div style="margin-bottom: 1.5rem; color: #92400e;">
+                    <p style="margin: 0;"><strong><i class="fas fa-info-circle"></i> Important:</strong> Since you uploaded a completed form, please provide your contact information so we can send you confirmation and updates about your complaint.</p>
                 </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label" for="bypass_email" style="font-weight: 600;">
-                        Your Email Address <span class="required">*</span>
-                    </label>
-                    <input type="email" 
-                           class="form-control" 
-                           id="bypass_email" 
-                           name="bypass_email_input" 
-                           placeholder="your.email@example.com" 
-                           required
-                           style="max-width: 400px;">
-                    <small style="color: var(--text-muted); display: block; margin-top: 0.5rem;">
-                        We will send your complaint reference number and status updates to this email.
-                    </small>
-                    <div id="emailError" style="color: #dc2626; font-size: 0.875rem; margin-top: 0.5rem; display: none;">
-                        <i class="fas fa-exclamation-circle"></i> Please enter a valid email address.
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 0;">
+                    <!-- Name Field -->
+                    <div class="form-group">
+                        <label class="form-label" style="font-weight: 600; color: #92400e;">
+                            Full Name <span class="required" style="color: #dc2626;">*</span>
+                        </label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="bypass_name" 
+                               name="bypass_name" 
+                               placeholder="Your full name" 
+                               value="<?php echo htmlspecialchars($data['name_pangalan'] ?? ''); ?>"
+                               required>
+                        <div class="field-error" id="bypassNameError" style="color: #dc2626; font-size: 0.875rem; margin-top: 0.5rem; display: none;">
+                            <i class="fas fa-exclamation-circle"></i> Name is required.
+                        </div>
+                    </div>
+
+                    <!-- Email Field -->
+                    <div class="form-group">
+                        <label class="form-label" style="font-weight: 600; color: #92400e;">
+                            Email Address <span class="required" style="color: #dc2626;">*</span>
+                        </label>
+                        <input type="email" 
+                               class="form-control" 
+                               id="bypass_email" 
+                               name="bypass_email" 
+                               placeholder="your@email.com" 
+                               value="<?php echo htmlspecialchars($data['email_address'] ?? ''); ?>"
+                               required>
+                        <div class="field-error" id="bypassEmailError" style="color: #dc2626; font-size: 0.875rem; margin-top: 0.5rem; display: none;">
+                            <i class="fas fa-exclamation-circle"></i> Valid email required.
+                        </div>
+                    </div>
+
+                    <!-- Contact Number Field -->
+                    <div class="form-group">
+                        <label class="form-label" style="font-weight: 600; color: #92400e;">
+                            Contact Number <span class="required" style="color: #dc2626;">*</span>
+                        </label>
+                        <input type="tel" 
+                               class="form-control" 
+                               id="bypass_contact" 
+                               name="bypass_contact" 
+                               placeholder="09171234567" 
+                               value="<?php echo htmlspecialchars($data['contact_number'] ?? ''); ?>"
+                               required>
+                        <div class="field-error" id="bypassContactError" style="color: #dc2626; font-size: 0.875rem; margin-top: 0.5rem; display: none;">
+                            <i class="fas fa-exclamation-circle"></i> Contact number required (min 7 digits).
+                        </div>
                     </div>
                 </div>
+            </div>
+        </section>
+        <?php else: ?>
+        <!-- Standard Mode: Display Complainant Information -->
+        <section class="form-section" style="margin-top:20px; background: #f0f9ff; border: 1px solid #bae6fd;">
+            <div class="section-header" style="background: #f0f9ff; border: none; color: #0c4a6e; padding: 12px 15px;">
+                <span class="section-icon"><i class="fas fa-info-circle"></i></span>
+                <strong>Complainant Information</strong>
+            </div>
+            <div class="section-content">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #bae6fd; background: #eff6ff; color: #0c4a6e; width: 25%;"><strong>Name:</strong></td>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #bae6fd; background: #f0f9ff;">
+                            <?php echo htmlspecialchars($data['name_pangalan'] ?? 'Not provided'); ?>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #bae6fd; background: #eff6ff; color: #0c4a6e;"><strong>Email:</strong></td>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #bae6fd; background: #f0f9ff;">
+                            <?php echo htmlspecialchars($data['email_address'] ?? 'Not provided'); ?>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 12px; background: #eff6ff; color: #0c4a6e;"><strong>Contact:</strong></td>
+                        <td style="padding: 10px 12px; background: #f0f9ff;">
+                            <?php echo htmlspecialchars($data['contact_number'] ?? 'Not provided'); ?>
+                        </td>
+                    </tr>
+                </table>
             </div>
         </section>
         <?php endif; ?>
 
         <!-- Action Buttons -->
-        <form method="POST" class="form-actions no-print" style="margin-top:20px;" id="submitForm">
-            <?php if ($needsEmail): ?>
-            <input type="hidden" name="bypass_email" id="bypass_email_hidden" value="">
-            <?php endif; ?>
+        <div class="form-actions" style="margin-top:20px;">
             <a href="index.php?edit=1" class="btn btn-secondary">⬅️ Go Back & Edit</a>
             <div style="display:flex;gap:10px;">
                 <button type="button" class="btn btn-outline" onclick="window.print()">🖨️ Print</button>
                 <button type="submit" 
                         name="confirm_submit" 
                         class="btn btn-success btn-lg" 
-                        id="submitBtn"
-                        <?php echo $needsEmail ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''; ?>>
+                        id="submitBtn">
                     ✅ Confirm & Submit
                 </button>
             </div>
+        </div>
         </form>
         
-        <?php if ($needsEmail): ?>
         <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const emailInput = document.getElementById('bypass_email');
-            const emailHidden = document.getElementById('bypass_email_hidden');
+            const isBypassMode = <?php echo $isHandwritten ? 'true' : 'false'; ?>;
+            const needsComplainantInfo = <?php echo $needsComplainantInfo ? 'true' : 'false'; ?>;
+            
+            let bypassNameInput, bypassEmailInput, bypassContactInput;
+            let bypassNameError, bypassEmailError, bypassContactError;
+            
+            if (isBypassMode && needsComplainantInfo) {
+                bypassNameInput = document.getElementById('bypass_name');
+                bypassEmailInput = document.getElementById('bypass_email');
+                bypassContactInput = document.getElementById('bypass_contact');
+                bypassNameError = document.getElementById('bypassNameError');
+                bypassEmailError = document.getElementById('bypassEmailError');
+                bypassContactError = document.getElementById('bypassContactError');
+            }
+            
             const submitBtn = document.getElementById('submitBtn');
-            const emailError = document.getElementById('emailError');
             const submitForm = document.getElementById('submitForm');
             
             function validateEmail(email) {
@@ -695,43 +786,93 @@ $othersText = ($data['referred_to'] === 'Others' && !empty($data['referred_to_ot
                 return re.test(email);
             }
             
+            function validateContact(contact) {
+                const digits = contact.replace(/\D/g, '');
+                return digits.length >= 7;
+            }
+            
             function updateSubmitButton() {
-                const email = emailInput.value.trim();
-                const isValid = validateEmail(email);
-                
-                if (email.length > 0 && !isValid) {
-                    emailError.style.display = 'block';
-                } else {
-                    emailError.style.display = 'none';
-                }
-                
-                if (isValid) {
+                if (!isBypassMode || !needsComplainantInfo) {
                     submitBtn.disabled = false;
                     submitBtn.style.opacity = '1';
                     submitBtn.style.cursor = 'pointer';
-                    emailHidden.value = email;
+                    return;
+                }
+                
+                const name = bypassNameInput.value.trim();
+                const email = bypassEmailInput.value.trim();
+                const contact = bypassContactInput.value.trim();
+                
+                // Clear previous errors
+                bypassNameError.style.display = 'none';
+                bypassEmailError.style.display = 'none';
+                bypassContactError.style.display = 'none';
+                
+                // Validate name
+                const nameValid = name.length >= 2;
+                if (name.length > 0 && name.length < 2) {
+                    bypassNameError.style.display = 'block';
+                }
+                
+                // Validate email
+                const emailValid = validateEmail(email);
+                if (email.length > 0 && !emailValid) {
+                    bypassEmailError.style.display = 'block';
+                }
+                
+                // Validate contact
+                const contactValid = validateContact(contact);
+                if (contact.length > 0 && !contactValid) {
+                    bypassContactError.style.display = 'block';
+                }
+                
+                // Enable/disable submit button
+                const allValid = nameValid && emailValid && contactValid;
+                
+                if (allValid) {
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '1';
+                    submitBtn.style.cursor = 'pointer';
                 } else {
                     submitBtn.disabled = true;
                     submitBtn.style.opacity = '0.5';
                     submitBtn.style.cursor = 'not-allowed';
-                    emailHidden.value = '';
                 }
             }
             
-            emailInput.addEventListener('input', updateSubmitButton);
-            emailInput.addEventListener('blur', updateSubmitButton);
+            // Add event listeners for bypass mode
+            if (isBypassMode && needsComplainantInfo) {
+                bypassNameInput.addEventListener('input', updateSubmitButton);
+                bypassNameInput.addEventListener('blur', updateSubmitButton);
+                bypassEmailInput.addEventListener('input', updateSubmitButton);
+                bypassEmailInput.addEventListener('blur', updateSubmitButton);
+                bypassContactInput.addEventListener('input', updateSubmitButton);
+                bypassContactInput.addEventListener('blur', updateSubmitButton);
+            }
             
-            // Prevent form submission if email is invalid
+            // Prevent form submission if validation fails
             submitForm.addEventListener('submit', function(e) {
-                if (!validateEmail(emailInput.value.trim())) {
+                if (!isBypassMode || !needsComplainantInfo) {
+                    return;
+                }
+                
+                const name = bypassNameInput.value.trim();
+                const email = bypassEmailInput.value.trim();
+                const contact = bypassContactInput.value.trim();
+                
+                const isValid = name.length >= 2 && validateEmail(email) && validateContact(contact);
+                
+                if (!isValid) {
                     e.preventDefault();
-                    emailError.style.display = 'block';
-                    emailInput.focus();
+                    updateSubmitButton();
+                    bypassNameInput.focus();
                 }
             });
+            
+            // Initial validation
+            updateSubmitButton();
         });
         </script>
-        <?php endif; ?>
 
         <footer class="form-footer no-print">
             <p>SDO CTS - San Pedro Division Office Complaint Tracking System</p>

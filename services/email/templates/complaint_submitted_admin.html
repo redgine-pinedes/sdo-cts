@@ -31,23 +31,39 @@
                     <!-- Content -->
                     <tr>
                         <td style="padding: 30px;">
-                            <h2 style="color: #28a745; margin-bottom: 20px;">✓ Complaint Resolved</h2>
+                            <h2 style="color: #0f4c75; margin-bottom: 20px;">New Complaint Received</h2>
                             
-                            <p>Dear <strong>{{name}}</strong>,</p>
+                            <p>A new complaint has been submitted to the system and requires attention.</p>
                             
-                            <p>We are pleased to inform you that your complaint has been <strong style="color: #28a745;">resolved</strong>.</p>
-                            
-                            <div style="background: #e8f8eb; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0;">
-                                <p style="margin: 0; font-size: 14px; color: #64748b;"><strong>Reference Number:</strong></p>
-                                <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: bold; color: #28a745; font-family: monospace;">{{reference_number}}</p>
-                                <p style="margin: 10px 0 0 0; font-size: 14px; color: #64748b;"><strong>Resolution Date:</strong> {{date}}</p>
+                            <div style="background: #e8f4fc; border-left: 4px solid #0f4c75; padding: 15px; margin: 20px 0;">
+                                <p style="margin: 0; font-size: 14px; color: #64748b;"><strong>Event Type:</strong> New Complaint Submission</p>
+                                <p style="margin: 5px 0 0 0; font-size: 14px; color: #64748b;"><strong>Date & Time:</strong> {{date}}</p>
+                                <p style="margin: 10px 0 0 0;"><strong>Reference Number:</strong></p>
+                                <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: bold; color: #0f4c75; font-family: monospace;">{{reference_number}}</p>
                             </div>
                             
-                            {{resolution_notes}}
+                            <h3 style="color: #0f4c75;">Complainant Information</h3>
+                            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                                <tr>
+                                    <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; color: #64748b; width: 35%;"><strong>Name:</strong></td>
+                                    <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #fff;">{{complaint_name}}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; color: #64748b;"><strong>Email:</strong></td>
+                                    <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #fff;"><a href="mailto:{{complaint_email}}" style="color: #0f4c75;">{{complaint_email}}</a></td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; color: #64748b;"><strong>Contact:</strong></td>
+                                    <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #fff;">{{complaint_contact}}</td>
+                                </tr>
+                            </table>
                             
-                            <p style="margin-top: 20px;">If you have any questions or concerns about this resolution, please don't hesitate to contact the Schools Division Office.</p>
+                            <h3 style="color: #0f4c75;">Complaint Preview</h3>
+                            <p style="background: #f0f9ff; padding: 15px; border-radius: 6px; color: #475569; border: 1px solid #bae6fd;">{{complaint_preview}}</p>
                             
-                            <p>Thank you for using the SDO Complaint Tracking System. Your feedback helps us improve our services.</p>
+                            <p style="margin-top: 25px; text-align: center;">
+                                <a href="{{admin_url}}" style="display: inline-block; background: linear-gradient(135deg, #0a2f4a 0%, #0f4c75 100%); color: white; padding: 14px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 15px;">View in Admin Panel</a>
+                            </p>
                         </td>
                     </tr>
                     <!-- Footer -->

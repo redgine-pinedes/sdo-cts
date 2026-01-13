@@ -11,9 +11,21 @@
                 <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <!-- Header -->
                     <tr>
-                        <td style="background: linear-gradient(135deg, #0a2f4a 0%, #0f4c75 50%, #1b6ca8 100%); padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
-                            <h1 style="color: #ffffff; margin: 0; font-size: 24px;">SDO CTS</h1>
-                            <p style="color: #bbe1fa; margin: 5px 0 0 0; font-size: 14px;">The Schools Division Office of San Pedro City<br>Complaint Tracking System</p>
+                        <td style="background: linear-gradient(135deg, #0a2f4a 0%, #0f4c75 50%, #1b6ca8 100%); padding: 30px; border-radius: 8px 8px 0 0;">
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td width="80" align="left" valign="middle">
+                                        <img src="cid:sdo_logo" alt="SDO Logo" width="70" height="70" style="border-radius: 50%; display: block;">
+                                    </td>
+                                    <td align="center" valign="middle">
+                                        <h1 style="color: #ffffff; margin: 0; font-size: 24px;">SDO CTS</h1>
+                                        <p style="color: #bbe1fa; margin: 5px 0 0 0; font-size: 14px;">The Schools Division Office of San Pedro City<br>Complaint Tracking System</p>
+                                    </td>
+                                    <td width="80" align="right" valign="middle">
+                                        <img src="cid:bagongpilipinas_logo" alt="Bagong Pilipinas Logo" width="70" height="70" style="display: block;">
+                                    </td>
+                                </tr>
+                            </table>
                         </td>
                     </tr>
                     <!-- Content -->
@@ -34,8 +46,23 @@
                             
                             <p><strong>Important:</strong> Please save this reference number. You will need it to track the status of your complaint.</p>
                             
-                            <p>You can track your complaint status at any time by visiting:</p>
-                            <p><a href="{{tracking_url}}" style="color: #1b6ca8;">{{tracking_url}}</a></p>
+                            <p>Please wait for further updates via email.</p>
+                            
+                            <h3 style="color: #0f4c75; margin-top: 30px;">Complainant Information</h3>
+                            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; max-width: 600px;">
+                                <tr>
+                                    <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; color: #64748b; width: 35%;"><strong>Name:</strong></td>
+                                    <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #fff;">{{complaint_name}}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; color: #64748b;"><strong>Email:</strong></td>
+                                    <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #fff;"><a href="mailto:{{complaint_email}}" style="color: #0f4c75;">{{complaint_email}}</a></td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; color: #64748b;"><strong>Contact:</strong></td>
+                                    <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #fff;">{{complaint_contact}}</td>
+                                </tr>
+                            </table>
                             
                             {{attachment_list}}
                             
@@ -49,10 +76,9 @@
                     </tr>
                     <!-- Footer -->
                     <tr>
-                        <td style="background-color: #f8fafc; padding: 20px; border-radius: 0 0 8px 8px; text-align: center; border-top: 1px solid #e2e8f0;">
-                            <p style="margin: 0; color: #64748b; font-size: 12px;">This is an automated message from the SDO CTS.</p>
-                            <p style="margin: 5px 0 0 0; color: #64748b; font-size: 12px;">Department of Education - The Schools Division Office of San Pedro City</p>
-                            <p style="margin: 10px 0 0 0; color: #94a3b8; font-size: 11px;">© 2026 SDO CTS. All rights reserved.</p>
+                        <td style="background-color: #f8fafc; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
+                            <p style="color: #64748b; font-size: 12px; margin: 0;">This is an automated message from The Schools Division Office of San Pedro City Complaint Tracking System.</p>
+                            <p style="color: #64748b; font-size: 12px; margin: 5px 0 0 0;">Please do not reply to this email.</p>
                         </td>
                     </tr>
                 </table>
