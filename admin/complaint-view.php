@@ -41,7 +41,8 @@ $primaryExt = null;
 $primaryOriginalName = null;
 if (!empty($documents)) {
     $primaryDoc = $documents[0];
-    $primaryUrl = "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $primaryDoc['file_name'];
+    // Use relative path from file_path column, fallback to old structure for backward compatibility
+    $primaryUrl = !empty($primaryDoc['file_path']) ? "/SDO-cts/" . $primaryDoc['file_path'] : "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $primaryDoc['file_name'];
     $primaryExt = strtolower(pathinfo($primaryDoc['file_name'], PATHINFO_EXTENSION));
     $primaryOriginalName = $primaryDoc['original_name'] ?? null;
 }
@@ -538,7 +539,8 @@ include __DIR__ . '/includes/header.php';
                 
                 // Use the first form document as the primary uploaded complaint form
                 $primaryDoc = !empty($formDocs) ? $formDocs[0] : null;
-                $primaryUrl = $primaryDoc ? "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $primaryDoc['file_name'] : '';
+                // Use relative path from file_path column, fallback to old structure for backward compatibility
+                $primaryUrl = $primaryDoc ? (!empty($primaryDoc['file_path']) ? "/SDO-cts/" . $primaryDoc['file_path'] : "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $primaryDoc['file_name']) : '';
                 $primaryExt = $primaryDoc ? strtolower(pathinfo($primaryDoc['file_name'], PATHINFO_EXTENSION)) : '';
                 $primaryIsImage = in_array($primaryExt, ['jpg','jpeg','png','gif']);
                 $primaryIsPdf = ($primaryExt === 'pdf');
@@ -576,7 +578,8 @@ include __DIR__ . '/includes/header.php';
                             $isImage = in_array($fileExt, ['jpg','jpeg','png','gif','webp']);
                             $isPdf = ($fileExt === 'pdf');
                             $docType = $isImage ? 'image' : ($isPdf ? 'pdf' : 'other');
-                            $fileUrl = "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $primaryDoc['file_name'];
+                            // Use relative path from file_path column, fallback to old structure for backward compatibility
+                            $fileUrl = !empty($primaryDoc['file_path']) ? "/SDO-cts/" . $primaryDoc['file_path'] : "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $primaryDoc['file_name'];
                             $iconClass = $isImage ? 'fa-image' : ($isPdf ? 'fa-file-pdf' : 'fa-file');
                             $iconColor = $isImage ? '#10b981' : ($isPdf ? '#ef4444' : '#6b7280');
                         ?>
@@ -626,7 +629,8 @@ include __DIR__ . '/includes/header.php';
                             $isImage = in_array($fileExt, ['jpg','jpeg','png','gif','webp']);
                             $isPdf = ($fileExt === 'pdf');
                             $docType = $isImage ? 'image' : ($isPdf ? 'pdf' : 'other');
-                            $fileUrl = "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $doc['file_name'];
+                            // Use relative path from file_path column, fallback to old structure for backward compatibility
+                            $fileUrl = !empty($doc['file_path']) ? "/SDO-cts/" . $doc['file_path'] : "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $doc['file_name'];
                             $iconClass = $isImage ? 'fa-image' : ($isPdf ? 'fa-file-pdf' : 'fa-file');
                             $iconColor = $isImage ? '#10b981' : ($isPdf ? '#ef4444' : '#6b7280');
                         ?>
@@ -675,7 +679,8 @@ include __DIR__ . '/includes/header.php';
                             $isImage = in_array($fileExt, ['jpg','jpeg','png','gif','webp']);
                             $isPdf = ($fileExt === 'pdf');
                             $docType = $isImage ? 'image' : ($isPdf ? 'pdf' : 'other');
-                            $fileUrl = "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $doc['file_name'];
+                            // Use relative path from file_path column, fallback to old structure for backward compatibility
+                            $fileUrl = !empty($doc['file_path']) ? "/SDO-cts/" . $doc['file_path'] : "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $doc['file_name'];
                             $iconClass = $isImage ? 'fa-image' : ($isPdf ? 'fa-file-pdf' : 'fa-file');
                             $iconColor = $isImage ? '#10b981' : ($isPdf ? '#ef4444' : '#6b7280');
                         ?>
@@ -789,7 +794,8 @@ include __DIR__ . '/includes/header.php';
                     <ul style="margin-top:8px;list-style:none;padding:0;">
                         <?php foreach ($handwrittenDocs as $doc): ?>
                         <?php
-                            $fileUrl = "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $doc['file_name'];
+                            // Use relative path from file_path column, fallback to old structure for backward compatibility
+                            $fileUrl = !empty($doc['file_path']) ? "/SDO-cts/" . $doc['file_path'] : "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $doc['file_name'];
                             $ext = strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
                             $isImage = in_array($ext, ['jpg','jpeg','png','gif']);
                             $isPdf = ($ext === 'pdf');
@@ -826,7 +832,8 @@ include __DIR__ . '/includes/header.php';
                     <ul style="margin-top:8px;list-style:none;padding:0;">
                         <?php foreach ($validIdDocs as $doc): ?>
                         <?php
-                            $fileUrl = "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $doc['file_name'];
+                            // Use relative path from file_path column, fallback to old structure for backward compatibility
+                            $fileUrl = !empty($doc['file_path']) ? "/SDO-cts/" . $doc['file_path'] : "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $doc['file_name'];
                             $ext = strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
                             $isImage = in_array($ext, ['jpg','jpeg','png','gif']);
                             $isPdf = ($ext === 'pdf');
@@ -863,7 +870,8 @@ include __DIR__ . '/includes/header.php';
                     <ul style="margin-top:8px;list-style:none;padding:0;">
                         <?php foreach ($supportingDocs as $doc): ?>
                         <?php
-                            $fileUrl = "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $doc['file_name'];
+                            // Use relative path from file_path column, fallback to old structure for backward compatibility
+                            $fileUrl = !empty($doc['file_path']) ? "/SDO-cts/" . $doc['file_path'] : "/SDO-cts/uploads/complaints/" . $complaint['id'] . "/" . $doc['file_name'];
                             $ext = strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
                             $isImage = in_array($ext, ['jpg','jpeg','png','gif']);
                             $isPdf = ($ext === 'pdf');

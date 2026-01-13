@@ -1,8 +1,14 @@
-# Uploads
+# Uploads - Old structure (deprecated, kept for backward compatibility)
 uploads/temp/*
 uploads/complaints/*
 !uploads/temp/.gitkeep
 !uploads/complaints/.gitkeep
+
+# Uploads - New centralized structure
+assets/uploads/images/*
+assets/uploads/documents/*
+!assets/uploads/images/.gitkeep
+!assets/uploads/documents/.gitkeep
 
 # Environment
 .env

@@ -96,11 +96,18 @@ class Complaint {
 
     /**
      * Add document to complaint
+     * @param int $complaintId Complaint ID
+     * @param string $fileName File name stored on disk
+     * @param string $originalName Original file name
+     * @param string $fileType MIME type
+     * @param int $fileSize File size in bytes
+     * @param string $category Category (supporting, valid_id, handwritten_form)
+     * @param string $filePath Relative path to file (e.g., assets/uploads/images/complaint_1_supporting_123.jpg)
      */
-    public function addDocument($complaintId, $fileName, $originalName, $fileType, $fileSize, $category = 'supporting') {
-        $sql = "INSERT INTO complaint_documents (complaint_id, file_name, original_name, file_type, file_size, category)
-                VALUES (?, ?, ?, ?, ?, ?)";
-        $this->db->query($sql, [$complaintId, $fileName, $originalName, $fileType, $fileSize, $category]);
+    public function addDocument($complaintId, $fileName, $originalName, $fileType, $fileSize, $category = 'supporting', $filePath = '') {
+        $sql = "INSERT INTO complaint_documents (complaint_id, file_name, file_path, original_name, file_type, file_size, category)
+                VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $this->db->query($sql, [$complaintId, $fileName, $filePath, $originalName, $fileType, $fileSize, $category]);
         return $this->db->lastInsertId();
     }
 

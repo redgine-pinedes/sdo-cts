@@ -69,17 +69,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_submit'])) {
             $referenceNumber = $result['reference_number'];
             
             if (!empty($files)) {
-                $uploadDir = __DIR__ . '/uploads/complaints/' . $complaintId . '/';
                 $tempDir = __DIR__ . '/uploads/temp/';
-                if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+                $imagesDir = __DIR__ . '/assets/uploads/images/';
+                $documentsDir = __DIR__ . '/assets/uploads/documents/';
+                
+                // Ensure directories exist
+                if (!is_dir($imagesDir)) mkdir($imagesDir, 0755, true);
+                if (!is_dir($documentsDir)) mkdir($documentsDir, 0755, true);
                 
                 foreach ($files as $file) {
                     $tempPath = $tempDir . $file['temp_name'];
-                    $newPath = $uploadDir . $file['temp_name'];
+                    
                     if (file_exists($tempPath)) {
-                        rename($tempPath, $newPath);
                         $category = $file['category'] ?? 'supporting';
-                        $complaint->addDocument($complaintId, $file['temp_name'], $file['original_name'], $file['type'], $file['size'], $category);
+                        $ext = strtolower(pathinfo($file['temp_name'], PATHINFO_EXTENSION));
+                        
+                        // Determine file type and target directory
+                        $isImage = in_array($ext, ['jpg', 'jpeg', 'png']);
+                        $targetDir = $isImage ? $imagesDir : $documentsDir;
+                        $targetRelativeDir = $isImage ? 'assets/uploads/images/' : 'assets/uploads/documents/';
+                        
+                        // Create filename: complaint_[id]_[category]_[timestamp].[ext]
+                        $timestamp = time() . '_' . uniqid();
+                        $newFileName = "complaint_{$complaintId}_{$category}_{$timestamp}.{$ext}";
+                        $newPath = $targetDir . $newFileName;
+                        $relativePath = $targetRelativeDir . $newFileName;
+                        
+                        // Move file to centralized folder
+                        if (rename($tempPath, $newPath)) {
+                            // Store with relative path
+                            $complaint->addDocument($complaintId, $newFileName, $file['original_name'], $file['type'], $file['size'], $category, $relativePath);
+                        }
                     }
                 }
             }

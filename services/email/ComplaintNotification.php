@@ -69,22 +69,25 @@ class ComplaintNotification {
             return $attachments;
         }
 
-        // Base upload directory for this complaint
-        $uploadDir = dirname(dirname(__DIR__)) . '/uploads/complaints/' . $complaintId . '/';
+        // Base directory for centralized uploads
+        $baseDir = dirname(dirname(__DIR__)) . '/';
         
-        if (!is_dir($uploadDir)) {
-            return $attachments;
-        }
-
-        // Try to get document info from database for original names
+        // Try to get document info from database
         try {
             require_once dirname(dirname(__DIR__)) . '/config/database.php';
             $db = Database::getInstance();
-            $sql = "SELECT file_name, original_name, category FROM complaint_documents WHERE complaint_id = ? ORDER BY upload_date ASC";
+            $sql = "SELECT file_name, file_path, original_name, category FROM complaint_documents WHERE complaint_id = ? ORDER BY upload_date ASC";
             $documents = $db->query($sql, [$complaintId])->fetchAll();
 
             foreach ($documents as $doc) {
-                $filePath = $uploadDir . $doc['file_name'];
+                // Use relative path from file_path column, fallback to old structure
+                if (!empty($doc['file_path'])) {
+                    $filePath = $baseDir . $doc['file_path'];
+                } else {
+                    // Fallback for old records
+                    $filePath = $baseDir . 'uploads/complaints/' . $complaintId . '/' . $doc['file_name'];
+                }
+                
                 if (file_exists($filePath)) {
                     // Create a descriptive name with category prefix
                     $categoryLabels = [
@@ -102,16 +105,19 @@ class ComplaintNotification {
                 }
             }
         } catch (Exception $e) {
-            // If database query fails, try to get files directly from directory
+            // If database query fails, fallback to old directory structure
             error_log("Error fetching complaint documents: " . $e->getMessage());
             
-            $files = glob($uploadDir . '*');
-            foreach ($files as $file) {
-                if (is_file($file)) {
-                    $attachments[] = [
-                        'path' => $file,
-                        'name' => basename($file)
-                    ];
+            $uploadDir = $baseDir . 'uploads/complaints/' . $complaintId . '/';
+            if (is_dir($uploadDir)) {
+                $files = glob($uploadDir . '*');
+                foreach ($files as $file) {
+                    if (is_file($file)) {
+                        $attachments[] = [
+                            'path' => $file,
+                            'name' => basename($file)
+                        ];
+                    }
                 }
             }
         }
